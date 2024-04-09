@@ -2,7 +2,6 @@ use bevy::math::Vec3Swizzles;
 use bevy::prelude::*;
 
 use crate::actions::game_control::{get_movement, GameControl};
-use crate::player::Player;
 use crate::GameState;
 
 mod game_control;
@@ -29,9 +28,9 @@ pub struct Actions {
 
 pub fn set_movement_actions(
     mut actions: ResMut<Actions>,
-    keyboard_input: Res<ButtonInput<KeyCode>>,
+    keyboard_input: Res<Input<KeyCode>>,
     touch_input: Res<Touches>,
-    player: Query<&Transform, With<Player>>,
+    player: Query<&Transform>,
     camera: Query<(&Camera, &GlobalTransform), With<Camera2d>>,
 ) {
     let mut player_movement = Vec2::new(

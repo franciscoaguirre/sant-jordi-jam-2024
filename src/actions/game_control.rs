@@ -1,4 +1,4 @@
-use bevy::prelude::{ButtonInput, KeyCode, Res};
+use bevy::prelude::{Input, KeyCode, Res};
 
 pub enum GameControl {
     Up,
@@ -8,25 +8,25 @@ pub enum GameControl {
 }
 
 impl GameControl {
-    pub fn pressed(&self, keyboard_input: &Res<ButtonInput<KeyCode>>) -> bool {
+    pub fn pressed(&self, keyboard_input: &Res<Input<KeyCode>>) -> bool {
         match self {
             GameControl::Up => {
-                keyboard_input.pressed(KeyCode::KeyW) || keyboard_input.pressed(KeyCode::ArrowUp)
+                keyboard_input.pressed(KeyCode::W) || keyboard_input.pressed(KeyCode::Up)
             }
             GameControl::Down => {
-                keyboard_input.pressed(KeyCode::KeyS) || keyboard_input.pressed(KeyCode::ArrowDown)
+                keyboard_input.pressed(KeyCode::S) || keyboard_input.pressed(KeyCode::Down)
             }
             GameControl::Left => {
-                keyboard_input.pressed(KeyCode::KeyA) || keyboard_input.pressed(KeyCode::ArrowLeft)
+                keyboard_input.pressed(KeyCode::A) || keyboard_input.pressed(KeyCode::Left)
             }
             GameControl::Right => {
-                keyboard_input.pressed(KeyCode::KeyD) || keyboard_input.pressed(KeyCode::ArrowRight)
+                keyboard_input.pressed(KeyCode::D) || keyboard_input.pressed(KeyCode::Right)
             }
         }
     }
 }
 
-pub fn get_movement(control: GameControl, input: &Res<ButtonInput<KeyCode>>) -> f32 {
+pub fn get_movement(control: GameControl, input: &Res<Input<KeyCode>>) -> f32 {
     if control.pressed(input) {
         1.0
     } else {
