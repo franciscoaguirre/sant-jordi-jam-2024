@@ -87,6 +87,34 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f26201604c87b1e01bd3d98f8d5d9a8fcbb815e8cedb41ffccbeb4bf593a35fe"
 
 [[package]]
+name = "aery"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ac1598b8481608165208f1dfe0b5d7a7b3431a4a6eb06174df848ff312eee7be"
+dependencies = [
+ "aery_macros",
+ "aquamarine",
+ "bevy_app 0.12.1",
+ "bevy_derive 0.12.1",
+ "bevy_ecs 0.12.1",
+ "bevy_hierarchy 0.12.1",
+ "bevy_log 0.12.1",
+ "bevy_utils 0.12.1",
+ "smallvec",
+]
+
+[[package]]
+name = "aery_macros"
+version = "0.3.0-dev"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "554bf2d435fa8cb00318d5d5556bb63ba511bea2a0534dd5c8bead4a55b4763b"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.52",
+]
+
+[[package]]
 name = "ahash"
 version = "0.8.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -187,6 +215,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cab112f0a86d568ea0e627cc1d6be74a1e9cd55214684db5561995f6dad897c6"
 dependencies = [
  "num-traits",
+]
+
+[[package]]
+name = "aquamarine"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d1da02abba9f9063d786eab1509833ebb2fac0f966862ca59439c76b9c566760"
+dependencies = [
+ "include_dir",
+ "itertools 0.10.5",
+ "proc-macro-error",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
 ]
 
 [[package]]
@@ -358,6 +400,31 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "611dd99f412e862610adb43e2243b16436c6d8009f6d9dbe8ce3d6d840b34029"
 dependencies = [
  "bevy_internal 0.13.0",
+]
+
+[[package]]
+name = "bevy-trait-query"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "03c0e3cf09569de8478a06f958a0df02cb12ecbda4d77059d8e4dc3e5a072126"
+dependencies = [
+ "bevy-trait-query-impl",
+ "bevy_app 0.12.1",
+ "bevy_core 0.12.1",
+ "bevy_ecs 0.12.1",
+ "tracing",
+]
+
+[[package]]
+name = "bevy-trait-query-impl"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4a9d5d3e9b4854feb8b622ceaa36e84cb4a14e30ef8b12231db681a04f545748"
+dependencies = [
+ "proc-macro-crate 1.3.1",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.52",
 ]
 
 [[package]]
@@ -1186,6 +1253,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_talks"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3a899d0f5d6f3f38890e1fc77e5f37371cd742d5350e5787f2c8fc9954a303a5"
+dependencies = [
+ "aery",
+ "bevy 0.12.1",
+ "bevy-trait-query",
+ "bevy_talks_macros",
+ "indexmap 2.2.5",
+ "ron",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "bevy_talks_macros"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dd6cfc7ba45a2b2fb3d94e2e209f17c43fdba215985a0c41cd03570b33d490de"
+dependencies = [
+ "proc-macro-crate 3.1.0",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.52",
+]
+
+[[package]]
 name = "bevy_tasks"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1447,7 +1542,7 @@ dependencies = [
  "bitflags 2.4.2",
  "cexpr",
  "clang-sys",
- "itertools",
+ "itertools 0.12.1",
  "lazy_static",
  "lazycell",
  "proc-macro2",
@@ -2420,6 +2515,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "include_dir"
+version = "0.7.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "18762faeff7122e89e0857b02f7ce6fcc0d101d5e9ad2ad7846cc01d61b7f19e"
+dependencies = [
+ "include_dir_macros",
+]
+
+[[package]]
+name = "include_dir_macros"
+version = "0.7.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b139284b5cf57ecfa712bcc66950bb635b31aff41c188e8a4cfc758eca374a3f"
+dependencies = [
+ "proc-macro2",
+ "quote",
+]
+
+[[package]]
 name = "indexmap"
 version = "1.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2485,6 +2599,15 @@ checksum = "4769cb30e5dcf1710fc6730d3e94f78c47723a014a567de385e113c737394640"
 dependencies = [
  "core-foundation-sys",
  "mach2",
+]
+
+[[package]]
+name = "itertools"
+version = "0.10.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b0fd2260e829bddf4cb6ea802289de2f86d6a7a690192fbe91b3f46e0f2c8473"
+dependencies = [
+ "either",
 ]
 
 [[package]]
@@ -3201,6 +3324,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "proc-macro-error"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "da25490ff9892aab3fcf7c36f08cfb902dd3e71ca0f9f9517bea02a73a5ce38c"
+dependencies = [
+ "proc-macro-error-attr",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+ "version_check",
+]
+
+[[package]]
+name = "proc-macro-error-attr"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a1be40180e52ecc98ad80b184934baf3d0d29f979574e439af5a55274b35f869"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "version_check",
+]
+
+[[package]]
 name = "proc-macro2"
 version = "1.0.79"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3433,6 +3580,7 @@ dependencies = [
  "bevy 0.12.1",
  "bevy_asset_loader",
  "bevy_kira_audio",
+ "bevy_talks",
  "embed-resource",
  "image",
  "rand",

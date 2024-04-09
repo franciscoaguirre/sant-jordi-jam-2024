@@ -1,7 +1,8 @@
 use crate::GameState;
-use bevy::prelude::*;
+use bevy::{asset::LoadState, prelude::*};
 use bevy_asset_loader::prelude::*;
 use bevy_kira_audio::AudioSource;
+use bevy_talks::prelude::*;
 
 pub struct LoadingPlugin;
 
@@ -10,28 +11,28 @@ pub struct LoadingPlugin;
 /// If interested, take a look at <https://bevy-cheatbook.github.io/features/assets.html>
 impl Plugin for LoadingPlugin {
     fn build(&self, app: &mut App) {
-        app.add_loading_state(
-            LoadingState::new(GameState::Loading)
-                .continue_to_state(GameState::Menu)
-                .load_collection::<AudioAssets>()
-                .load_collection::<TextureAssets>(),
-        );
+        app.add_systems(OnEnter(GameState::Loading), load_talks)
+            .add_systems(Update, check_loading.run_if(in_state(GameState::Loading)));
     }
 }
 
-// the following asset collections will be loaded during the State `GameState::Loading`
-// when done loading, they will be inserted as resources (see <https://github.com/NiklasEi/bevy_asset_loader>)
-
-#[derive(AssetCollection, Resource)]
-pub struct AudioAssets {
-    #[asset(path = "audio/flying.ogg")]
-    pub flying: Handle<AudioSource>,
+#[derive(Resource)]
+pub struct SimpleTalkAsset {
+    pub handle: Handle<TalkData>,
 }
 
-#[derive(AssetCollection, Resource)]
-pub struct TextureAssets {
-    #[asset(path = "textures/bevy.png")]
-    pub bevy: Handle<Image>,
-    #[asset(path = "textures/github.png")]
-    pub github: Handle<Image>,
+fn load_talks(mut commands: Commands, server: Res<AssetServer>) {
+    let handle: Handle<TalkData> = server.load("talks/hello.talk.ron");
+    commands.insert_resource(SimpleTalkAsset { handle });
+}
+
+fn check_loading(
+    server: Res<AssetServer>,
+    simple_talk_asset: Res<SimpleTalkAsset>,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
+    let load_state = server.get_load_state(&simple_talk_asset.handle).unwrap();
+    if load_state == LoadState::Loaded {
+        next_state.set(GameState::Menu);
+    }
 }
