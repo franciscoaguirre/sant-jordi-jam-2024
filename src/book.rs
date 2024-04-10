@@ -69,7 +69,7 @@ fn setup_book(
                     style: Style {
                         width: Val::Percent(50.0),
                         height: Val::Percent(100.0),
-                        padding: UiRect::all(Val::Px(10.0)),
+                        padding: UiRect::all(Val::Px(20.0)),
                         ..default()
                     },
                     ..default()
@@ -94,7 +94,7 @@ fn setup_book(
                     style: Style {
                         width: Val::Percent(50.0),
                         height: Val::Percent(100.0),
-                        padding: UiRect::all(Val::Px(10.0)),
+                        padding: UiRect::all(Val::Px(20.0)),
                         ..default()
                     },
                     ..default()
