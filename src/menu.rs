@@ -33,7 +33,13 @@ struct Menu;
 
 fn setup_menu(mut commands: Commands) {
     info!("menu");
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn(Camera2dBundle {
+        camera: Camera {
+            order: 0,
+            ..default()
+        },
+        ..default()
+    });
     commands
         .spawn((
             NodeBundle {
