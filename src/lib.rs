@@ -4,6 +4,7 @@ mod actions;
 mod book;
 mod loading;
 mod menu;
+mod resources;
 
 use crate::actions::ActionsPlugin;
 use crate::book::BookPlugin;

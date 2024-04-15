@@ -1,7 +1,11 @@
 use bevy::prelude::*;
 use bevy_talks::prelude::*;
 
-use crate::{loading::SimpleTalkAsset, GameState};
+use crate::{
+    loading::SimpleTalkAsset,
+    resources::{Animations, BookFont},
+    GameState,
+};
 
 pub struct BookPlugin;
 
@@ -10,17 +14,21 @@ impl Plugin for BookPlugin {
         app.add_systems(OnEnter(GameState::Playing), (setup_talk, setup_book))
             .add_systems(
                 Update,
-                (interact, print_text).run_if(in_state(GameState::Playing)),
+                (start_animation, interact, print_text, print_choices)
+                    .run_if(in_state(GameState::Playing)),
             );
     }
 }
 
 #[derive(Component)]
-pub struct MainText;
+pub struct FirstPage;
 
-fn setup_book(mut commands: Commands, asset_server: Res<AssetServer>) {
+#[derive(Component)]
+pub struct SecondPage;
+
+fn setup_book(mut commands: Commands) {
     commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(0.0, 9.0, 0.0).looking_at(Vec3::ZERO, Vec3::Y),
+        transform: Transform::from_xyz(-1.0, 3.0, 0.0).looking_at(Vec3::ZERO, Vec3::Y),
         camera: Camera {
             order: 1,
             ..default()
@@ -33,11 +41,6 @@ fn setup_book(mut commands: Commands, asset_server: Res<AssetServer>) {
             ..default()
         },
         transform: Transform::from_xyz(3.0, 9.0, 3.0).looking_at(Vec3::ZERO, Vec3::Y),
-        ..default()
-    });
-    commands.spawn(SceneBundle {
-        scene: asset_server.load("models/book.gltf#Scene0"),
-        transform: Transform::from_xyz(0.0, 0.0, 0.0),
         ..default()
     });
     commands
@@ -59,8 +62,8 @@ fn setup_book(mut commands: Commands, asset_server: Res<AssetServer>) {
         })
         .with_children(|children| {
             // First page.
-            children
-                .spawn(NodeBundle {
+            children.spawn((
+                NodeBundle {
                     style: Style {
                         width: Val::Percent(50.0),
                         height: Val::Percent(100.0),
@@ -68,24 +71,13 @@ fn setup_book(mut commands: Commands, asset_server: Res<AssetServer>) {
                         ..default()
                     },
                     ..default()
-                })
-                .with_children(|children| {
-                    children.spawn((
-                        TextBundle::from_section(
-                            "Hola",
-                            TextStyle {
-                                font_size: 40.0,
-                                color: Color::BLACK,
-                                ..default()
-                            },
-                        ),
-                        MainText,
-                    ));
-                });
+                },
+                FirstPage,
+            ));
 
             // Second page.
-            children
-                .spawn(NodeBundle {
+            children.spawn((
+                NodeBundle {
                     style: Style {
                         width: Val::Percent(50.0),
                         height: Val::Percent(100.0),
@@ -93,18 +85,19 @@ fn setup_book(mut commands: Commands, asset_server: Res<AssetServer>) {
                         ..default()
                     },
                     ..default()
-                })
-                .with_children(|children| {
-                    children.spawn(TextBundle::from_section(
-                        "Adios",
-                        TextStyle {
-                            font_size: 40.0,
-                            color: Color::BLACK,
-                            ..default()
-                        },
-                    ));
-                });
+                },
+                SecondPage,
+            ));
         });
+}
+
+fn start_animation(
+    animations: Res<Animations>,
+    mut players: Query<&mut AnimationPlayer, Added<AnimationPlayer>>,
+) {
+    for mut player in players.iter_mut() {
+        player.play(animations.0[0].clone_weak()).repeat();
+    }
 }
 
 fn setup_talk(
@@ -125,14 +118,49 @@ fn interact(
 ) {
     if input.just_pressed(KeyCode::Space) {
         next_action_events.send(NextNodeRequest::new(talks.single()));
+        next_action_events.send(NextNodeRequest::new(talks.single()));
     }
 }
 
 fn print_text(
     mut text_events: EventReader<TextNodeEvent>,
-    mut label: Query<&mut Text, With<MainText>>,
+    first_page: Query<Entity, With<FirstPage>>,
+    mut commands: Commands,
+    book_font: Res<BookFont>,
 ) {
     for text_event in text_events.read() {
-        label.single_mut().sections[0].value = text_event.text.clone();
+        let first_page = first_page.single();
+        commands.entity(first_page).with_children(|parent| {
+            parent.spawn(TextBundle::from_section(
+                &text_event.text,
+                TextStyle {
+                    font_size: 20.0,
+                    color: Color::BLACK,
+                    font: book_font.0.clone(),
+                },
+            ));
+        });
+    }
+}
+
+fn print_choices(
+    mut choices_events: EventReader<ChoiceNodeEvent>,
+    second_page: Query<Entity, With<SecondPage>>,
+    mut commands: Commands,
+) {
+    for choices_event in choices_events.read() {
+        let second_page = second_page.single();
+        commands.entity(second_page).with_children(|parent| {
+            for (_, choice) in choices_event.choices.iter().enumerate() {
+                parent.spawn(TextBundle::from_section(
+                    &choice.text,
+                    TextStyle {
+                        font_size: 20.0,
+                        color: Color::BLACK,
+                        ..default()
+                    },
+                ));
+            }
+        });
     }
 }
