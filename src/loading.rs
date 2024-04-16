@@ -1,5 +1,5 @@
 use crate::{
-    resources::{Animations, BookFont},
+    resources::{Animations, BookFont, SimpleTalkAsset},
     GameState,
 };
 use bevy::{asset::LoadState, prelude::*};
@@ -20,11 +20,6 @@ impl Plugin for LoadingPlugin {
     }
 }
 
-#[derive(Resource)]
-pub struct SimpleTalkAsset {
-    pub handle: Handle<TalkData>,
-}
-
 fn load_talks(mut commands: Commands, server: Res<AssetServer>) {
     let handle: Handle<TalkData> = server.load("talks/hello.talk.ron");
     commands.insert_resource(SimpleTalkAsset { handle });
@@ -43,7 +38,8 @@ fn load_book_model(mut commands: Commands, server: Res<AssetServer>) {
 }
 
 fn load_font(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let font_handle = asset_server.load("fonts/BouwsUnc.ttf");
+    // let font_handle = asset_server.load("fonts/BouwsUnc.ttf");
+    let font_handle = asset_server.load("fonts/OldLondon.ttf");
     commands.insert_resource(BookFont(font_handle));
 }
 

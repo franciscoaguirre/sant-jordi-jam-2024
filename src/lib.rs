@@ -43,9 +43,9 @@ impl Plugin for GamePlugin {
             BookPlugin,
         ));
 
-        #[cfg(debug_assertions)]
-        {
-            app.add_plugins((FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin::default()));
-        }
+        // #[cfg(debug_assertions)]
+        // {
+        //     app.add_plugins((FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin::default()));
+        // }
     }
 }
