@@ -208,7 +208,7 @@ fn print_options(
     for choices_event in choices_events.read() {
         let second_page = second_page.single();
         commands.entity(second_page).with_children(|parent| {
-            for (_, choice) in choices_event.choices.iter().enumerate() {
+            for choice in choices_event.choices.iter() {
                 parent
                     .spawn((
                         ButtonBundle {

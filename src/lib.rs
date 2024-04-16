@@ -12,8 +12,8 @@ use crate::loading::LoadingPlugin;
 use crate::menu::MenuPlugin;
 
 use bevy::app::App;
-#[cfg(debug_assertions)]
-use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
+// #[cfg(debug_assertions)]
+// use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::prelude::*;
 use bevy_talks::prelude::*;
 
