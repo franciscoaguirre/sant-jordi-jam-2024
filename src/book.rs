@@ -2,9 +2,8 @@ use bevy::prelude::*;
 use bevy_talks::prelude::*;
 
 use crate::{
-    resources::{
-        Animations, BookFont, BookState, BookStateMachine, BookTransition, SimpleTalkAsset,
-    },
+    book_text,
+    resources::{Animations, BookFont, BookState, BookStateMachine, BookTransition, Illustrations},
     GameState,
 };
 
@@ -53,12 +52,10 @@ pub struct TalkOption(pub usize);
 
 fn setup_talk(
     mut commands: Commands,
-    talks: Res<Assets<TalkData>>,
-    simple_talk_asset: Res<SimpleTalkAsset>,
     mut event_writer: EventWriter<BookTransition>,
+    illustrations: Res<Illustrations>,
 ) {
-    let simple_talk = talks.get(&simple_talk_asset.handle).unwrap();
-    let talk_builder = TalkBuilder::default().fill_with_talk_data(simple_talk);
+    let talk_builder = book_text::get_book_text(&illustrations);
     commands.spawn_talk(talk_builder);
     event_writer.send(BookTransition::ShowFirstTalk);
 }

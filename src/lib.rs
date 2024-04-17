@@ -2,6 +2,7 @@
 
 mod actions;
 mod book;
+mod book_text;
 mod loading;
 mod menu;
 mod resources;

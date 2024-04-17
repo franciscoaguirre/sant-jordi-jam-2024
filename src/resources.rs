@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use bevy::log;
 use bevy::prelude::*;
-use bevy_talks::prelude::*;
 
 #[derive(Resource)]
 pub struct Animations(pub Vec<Handle<AnimationClip>>);
@@ -10,41 +9,24 @@ pub struct Animations(pub Vec<Handle<AnimationClip>>);
 #[derive(Resource)]
 pub struct BookFont(pub Handle<Font>);
 
-#[derive(Resource)]
-pub struct SimpleTalkAsset {
-    pub handle: Handle<TalkData>,
-}
-
 /// Illustrations for the options in the game.
 /// Maps node indices to arrays of illustrations.
 /// The array of illustrations corresponds with the array of options.
 #[derive(Resource)]
-pub struct Illustrations(pub HashMap<usize, Vec<Illustration>>);
+pub struct Illustrations(pub HashMap<&'static str, Handle<Image>>);
 
 impl Illustrations {
     pub fn new(asset_server: &Res<AssetServer>) -> Self {
         let mut map = HashMap::new();
         map.insert(
-            2,
-            vec![
-                Illustration::new("textures/normal-dragon.png", asset_server),
-                Illustration::new("textures/sant-jordi-disguised-as-dragon.png", asset_server),
-            ],
+            "normal-dragon",
+            asset_server.load("textures/normal-dragon.png"),
+        );
+        map.insert(
+            "sant-jordi-disguised-as-dragon",
+            asset_server.load("textures/sant-jordi-disguised-as-dragon.png"),
         );
         Self(map)
-    }
-}
-
-#[derive(Resource)]
-pub struct Illustration {
-    pub handle: Handle<Image>,
-}
-
-impl Illustration {
-    pub fn new(file: &'static str, asset_server: &Res<AssetServer>) -> Self {
-        Self {
-            handle: asset_server.load(file),
-        }
     }
 }
 

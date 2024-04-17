@@ -8,7 +8,7 @@
     (
       id: 1,
       text: Some("Érase una vez..."),
-      next: Some(80),
+      next: Some(2),
     ),
     (
       id: 2,
