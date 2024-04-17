@@ -28,7 +28,7 @@ pub struct Actions {
 
 pub fn set_movement_actions(
     mut actions: ResMut<Actions>,
-    keyboard_input: Res<Input<KeyCode>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
     touch_input: Res<Touches>,
     player: Query<&Transform>,
     camera: Query<(&Camera, &GlobalTransform), With<Camera2d>>,

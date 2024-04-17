@@ -14,6 +14,7 @@ impl Plugin for LoadingPlugin {
             LoadingState::new(GameState::Loading)
                 .continue_to_state(GameState::Menu)
                 .load_collection::<FontAssets>()
+                .load_collection::<ModelAssets>()
                 .load_collection::<AudioAssets>()
                 .load_collection::<TextureAssets>(),
         );
@@ -26,9 +27,9 @@ impl Plugin for LoadingPlugin {
 #[derive(AssetCollection, Resource)]
 pub struct FontAssets {
     #[asset(path = "fonts/Enchanted Land.otf")]
-    pub normal_font: Handle<Font>,
+    pub normal: Handle<Font>,
     #[asset(path = "fonts/GoudyIni.ttf")]
-    pub initials_font: Handle<Font>,
+    pub initials: Handle<Font>,
 }
 
 #[derive(AssetCollection, Resource)]
@@ -47,4 +48,16 @@ pub struct TextureAssets {
     pub normal_dragon: Handle<Image>,
     #[asset(path = "textures/sant-jordi-disguised-as-dragon.png")]
     pub sant_jordi_disguised_as_dragon: Handle<Image>,
+}
+
+#[derive(AssetCollection, Resource)]
+pub struct ModelAssets {
+    #[asset(path = "models/book.gltf#Scene0")]
+    pub book: Handle<Scene>,
+}
+
+#[derive(AssetCollection, Resource)]
+pub struct AnimationAssets {
+    #[asset(path = "models/book.gltf#Animation0")]
+    pub page_flip: Handle<AnimationClip>,
 }
