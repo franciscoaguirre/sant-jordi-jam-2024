@@ -13,6 +13,7 @@ impl Plugin for LoadingPlugin {
         app.add_loading_state(
             LoadingState::new(GameState::Loading)
                 .continue_to_state(GameState::Menu)
+                .load_collection::<FontAssets>()
                 .load_collection::<AudioAssets>()
                 .load_collection::<TextureAssets>(),
         );
@@ -21,6 +22,14 @@ impl Plugin for LoadingPlugin {
 
 // the following asset collections will be loaded during the State `GameState::Loading`
 // when done loading, they will be inserted as resources (see <https://github.com/NiklasEi/bevy_asset_loader>)
+
+#[derive(AssetCollection, Resource)]
+pub struct FontAssets {
+    #[asset(path = "fonts/Enchanted Land.otf")]
+    pub normal_font: Handle<Font>,
+    #[asset(path = "fonts/GoudyIni.ttf")]
+    pub initials_font: Handle<Font>,
+}
 
 #[derive(AssetCollection, Resource)]
 pub struct AudioAssets {
@@ -34,4 +43,8 @@ pub struct TextureAssets {
     pub bevy: Handle<Image>,
     #[asset(path = "textures/github.png")]
     pub github: Handle<Image>,
+    #[asset(path = "textures/normal-dragon.png")]
+    pub normal_dragon: Handle<Image>,
+    #[asset(path = "textures/sant-jordi-disguised-as-dragon.png")]
+    pub sant_jordi_disguised_as_dragon: Handle<Image>,
 }
