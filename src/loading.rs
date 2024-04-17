@@ -1,5 +1,5 @@
 use crate::{
-    resources::{Animations, BookFont, SimpleTalkAsset},
+    resources::{Animations, BookFont, Illustrations, SimpleTalkAsset},
     GameState,
 };
 use bevy::{asset::LoadState, prelude::*};
@@ -14,10 +14,14 @@ impl Plugin for LoadingPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             OnEnter(GameState::Loading),
-            (load_talks, load_book_model, load_font),
+            (load_talks, load_book_model, load_font, load_illustrations),
         )
         .add_systems(Update, check_loading.run_if(in_state(GameState::Loading)));
     }
+}
+
+fn load_illustrations(mut commands: Commands, server: Res<AssetServer>) {
+    commands.insert_resource(Illustrations::new(&server));
 }
 
 fn load_talks(mut commands: Commands, server: Res<AssetServer>) {

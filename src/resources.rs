@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use bevy::log;
 use bevy::prelude::*;
 use bevy_talks::prelude::*;
@@ -11,6 +13,39 @@ pub struct BookFont(pub Handle<Font>);
 #[derive(Resource)]
 pub struct SimpleTalkAsset {
     pub handle: Handle<TalkData>,
+}
+
+/// Illustrations for the options in the game.
+/// Maps node indices to arrays of illustrations.
+/// The array of illustrations corresponds with the array of options.
+#[derive(Resource)]
+pub struct Illustrations(pub HashMap<usize, Vec<Illustration>>);
+
+impl Illustrations {
+    pub fn new(asset_server: &Res<AssetServer>) -> Self {
+        let mut map = HashMap::new();
+        map.insert(
+            2,
+            vec![
+                Illustration::new("textures/normal-dragon.png", asset_server),
+                Illustration::new("textures/sant-jordi-disguised-as-dragon.png", asset_server),
+            ],
+        );
+        Self(map)
+    }
+}
+
+#[derive(Resource)]
+pub struct Illustration {
+    pub handle: Handle<Image>,
+}
+
+impl Illustration {
+    pub fn new(file: &'static str, asset_server: &Res<AssetServer>) -> Self {
+        Self {
+            handle: asset_server.load(file),
+        }
+    }
 }
 
 #[derive(Resource, Default)]
@@ -27,10 +62,17 @@ impl BookStateMachine {
         self.state = match (&self.state, transition) {
             (Start, ShowFirstTalk) => ShowingFirstTalk,
             (ShowingFirstTalk, StartChoosing) => Choosing,
-            (Choosing, ChooseOption) => ShowingChoice,
-            (ShowingChoice, StartPageFlip) => PageFlipStarted,
-            (PageFlipStarted, EndPageFlip) => PageFlipEnded,
-            (PageFlipEnded, Redraw) => Choosing,
+            (Choosing, ChooseOption { index }) => ShowingChoice {
+                chosen_option: *index,
+            },
+            (ShowingChoice { chosen_option }, StartPageFlip) => PageFlipStarted {
+                chosen_option: *chosen_option,
+            },
+            (PageFlipStarted { chosen_option }, EndPageFlip) => PageFlipEnded {
+                chosen_option: *chosen_option,
+            },
+            (PageFlipEnded { .. }, Redraw) => DrawingOptions,
+            (DrawingOptions, OptionsDrawn) => Choosing,
             (state, transition) => {
                 panic!(
                     "Invalid state transition: ({:?}, {:?}). Shouldn't be allowed. ",
@@ -47,9 +89,10 @@ pub enum BookState {
     Start,
     ShowingFirstTalk,
     Choosing,
-    ShowingChoice,
-    PageFlipStarted,
-    PageFlipEnded,
+    ShowingChoice { chosen_option: usize },
+    PageFlipStarted { chosen_option: usize },
+    PageFlipEnded { chosen_option: usize },
+    DrawingOptions,
 }
 
 impl Default for BookState {
@@ -62,8 +105,9 @@ impl Default for BookState {
 pub enum BookTransition {
     ShowFirstTalk,
     StartChoosing,
-    ChooseOption,
+    ChooseOption { index: usize },
     StartPageFlip,
     EndPageFlip,
     Redraw,
+    OptionsDrawn,
 }

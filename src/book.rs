@@ -9,7 +9,6 @@ use crate::{
 };
 
 pub struct BookPlugin;
-
 impl Plugin for BookPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<BookStateMachine>()
@@ -27,6 +26,7 @@ impl Plugin for BookPlugin {
                     clear_book_content,
                     draw_new_book_content,
                     page_flip_listener,
+                    draw_options,
                 )
                     .run_if(in_state(GameState::Playing)),
             );
@@ -46,8 +46,10 @@ pub struct FirstPage;
 #[derive(Component)]
 pub struct SecondPage;
 
+/// An option of a Talk, signifying a fork in the road.
+/// The inner number is the option id to advance the talk graph.
 #[derive(Component)]
-pub struct Option;
+pub struct TalkOption(pub usize);
 
 fn setup_talk(
     mut commands: Commands,
@@ -57,7 +59,6 @@ fn setup_talk(
 ) {
     let simple_talk = talks.get(&simple_talk_asset.handle).unwrap();
     let talk_builder = TalkBuilder::default().fill_with_talk_data(simple_talk);
-
     commands.spawn_talk(talk_builder);
     event_writer.send(BookTransition::ShowFirstTalk);
 }
@@ -76,7 +77,8 @@ fn clear_book_content(
     book_state_machine: Res<BookStateMachine>,
     erasable_query: Query<Entity, With<Erasable>>,
 ) {
-    if let BookState::PageFlipStarted = book_state_machine.state {
+    // We can safely ignore `chosen_option` here, it's being handled in `page_flip_listener`.
+    if let BookState::PageFlipStarted { chosen_option: _ } = book_state_machine.state {
         for entity in erasable_query.iter() {
             commands.get_entity(entity).unwrap().despawn_recursive();
         }
@@ -85,13 +87,37 @@ fn clear_book_content(
 
 fn draw_new_book_content(
     book_state_machine: Res<BookStateMachine>,
-    mut next_action_events: EventWriter<NextNodeRequest>,
+    mut choose_action_events: EventWriter<ChooseNodeRequest>,
     talks: Query<Entity, With<Talk>>,
+    choices: Query<&ChoiceNode, With<CurrentNode>>,
     mut event_writer: EventWriter<BookTransition>,
 ) {
-    if let BookState::PageFlipEnded = book_state_machine.state {
-        advance_talk(&mut next_action_events, &talks);
+    if let BookState::PageFlipEnded { chosen_option } = book_state_machine.state {
+        let talk_entity = talks.single();
+        let choice_node = choices.single();
+        // 1. Advance the talk graph on the `chosen_option` branch.
+        choose_action_events.send(ChooseNodeRequest::new(
+            talk_entity,
+            choice_node.0[chosen_option].next,
+        ));
+        // 2. Send transition to draw next text node.
         event_writer.send(BookTransition::Redraw);
+    }
+}
+
+/// Had to add this new system because you can't choose an option and ask for the next
+/// node on the same system call.
+fn draw_options(
+    book_state_machine: Res<BookStateMachine>,
+    talks: Query<Entity, With<Talk>>,
+    mut next_action_events: EventWriter<NextNodeRequest>,
+    mut event_writer: EventWriter<BookTransition>,
+) {
+    if let BookState::DrawingOptions = book_state_machine.state {
+        let talk_entity = talks.single();
+        // 3. Receive transition and request the next node to fill in the second page.
+        next_action_events.send(NextNodeRequest::new(talk_entity));
+        event_writer.send(BookTransition::OptionsDrawn);
     }
 }
 
@@ -102,7 +128,9 @@ fn flip_page(
     book_state_machine: Res<BookStateMachine>,
     mut event_writer: EventWriter<BookTransition>,
 ) {
-    if let BookState::ShowingChoice = book_state_machine.state {
+    // We ignore `chosen_option` because this is not the place for it to be used.
+    // It's going to be used in `draw_new_book_content`.
+    if let BookState::ShowingChoice { .. } = book_state_machine.state {
         for mut player in players.iter_mut() {
             if keyboard_input.just_pressed(KeyCode::Space) {
                 player.start(animations.0[0].clone_weak());
@@ -117,7 +145,9 @@ fn page_flip_listener(
     mut event_writer: EventWriter<BookTransition>,
     players: Query<&AnimationPlayer>,
 ) {
-    if let BookState::PageFlipStarted = book_state_machine.state {
+    // We ignore `chosen_option` because this is not the place for it to be used.
+    // It's going to be used in `draw_new_book_content`.
+    if let BookState::PageFlipStarted { .. } = book_state_machine.state {
         for player in players.iter() {
             if player.is_finished() {
                 event_writer.send(BookTransition::EndPageFlip);
@@ -133,31 +163,23 @@ fn show_first_talk(
     mut event_writer: EventWriter<BookTransition>,
 ) {
     if let BookState::ShowingFirstTalk = book_state_machine.state {
-        advance_talk(&mut next_action_events, &talks);
+        next_action_events.send(NextNodeRequest::new(talks.single()));
+        next_action_events.send(NextNodeRequest::new(talks.single()));
         event_writer.send(BookTransition::StartChoosing);
     }
 }
 
-/// We advance talks by twos, so we fill up both open pages of the book.
-fn advance_talk(
-    next_action_events: &mut EventWriter<NextNodeRequest>,
-    talks: &Query<Entity, With<Talk>>,
-) {
-    next_action_events.send(NextNodeRequest::new(talks.single()));
-    next_action_events.send(NextNodeRequest::new(talks.single()));
-}
-
 fn choose_options(
     interaction_query: Query<
-        (&Interaction, &Children),
-        (Changed<Interaction>, With<Button>, With<Option>),
+        (&Interaction, &Children, &TalkOption),
+        (Changed<Interaction>, With<Button>),
     >,
     mut text_query: Query<&mut Text>,
     book_state_machine: Res<BookStateMachine>,
     mut event_writer: EventWriter<BookTransition>,
 ) {
     if let BookState::Choosing = book_state_machine.state {
-        for (interaction, children) in interaction_query.iter() {
+        for (interaction, children, talk_option) in interaction_query.iter() {
             let mut text = text_query.get_mut(children[0]).unwrap();
             match *interaction {
                 Interaction::Hovered => {
@@ -168,7 +190,9 @@ fn choose_options(
                 }
                 Interaction::Pressed => {
                     text.sections[0].style.color = PRESSED_BUTTON_COLOR;
-                    event_writer.send(BookTransition::ChooseOption);
+                    event_writer.send(BookTransition::ChooseOption {
+                        index: talk_option.0,
+                    });
                 }
             }
         }
@@ -208,14 +232,14 @@ fn print_options(
     for choices_event in choices_events.read() {
         let second_page = second_page.single();
         commands.entity(second_page).with_children(|parent| {
-            for choice in choices_event.choices.iter() {
+            for (index, choice) in choices_event.choices.iter().enumerate() {
                 parent
                     .spawn((
                         ButtonBundle {
                             background_color: Color::NONE.into(),
                             ..default()
                         },
-                        Option,
+                        TalkOption(index),
                         Erasable,
                     ))
                     .with_children(|children| {
