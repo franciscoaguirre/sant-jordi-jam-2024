@@ -1,5 +1,5 @@
 [build]
-public_url = "/"
+public_url = "/sant-jordi-jam-2024/"
 
 [serve]
 port = 8080
