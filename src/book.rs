@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
+    book_content::{self, BookGraph, BookNode},
     graph::{GetNextNode, Graph, Node},
     loading::{AnimationAssets, FontAssets, ModelAssets, TextureAssets},
     GameState,
@@ -71,9 +72,6 @@ impl Lifecycle {
 fn setup_lifecycle(mut commands: Commands) {
     commands.insert_resource(LifecycleManager(Lifecycle::ShowNode));
 }
-
-type BookGraph = Graph<&'static str, NodeChoice>;
-type BookNode = Node<&'static str, NodeChoice>;
 
 fn leave_only_chosen_option(
     mut commands: Commands,
@@ -151,7 +149,7 @@ fn transition_listener(
 
 fn show_current_node_and_transition(
     graph: Res<BookGraph>,
-    lifecycle: Res<LifecycleManager>,
+    mut lifecycle: ResMut<LifecycleManager>,
     mut event_writer: EventWriter<Transition>,
     first_page: Query<Entity, With<FirstPage>>,
     second_page: Query<Entity, With<SecondPage>>,
@@ -161,14 +159,18 @@ fn show_current_node_and_transition(
     if let Lifecycle::ShowNode = lifecycle.0 {
         let first_page = first_page.single();
         let second_page = second_page.single();
-        show_current_node(
+        let is_simple = show_current_node(
             graph.get_current_node(),
             first_page,
             second_page,
             &mut commands,
             &fonts,
         );
-        event_writer.send(Transition);
+        if is_simple {
+            lifecycle.0 = Lifecycle::Chosen;
+        } else {
+            event_writer.send(Transition);
+        }
     }
 }
 
@@ -211,13 +213,14 @@ pub struct ChosenOption;
 #[derive(Component)]
 pub struct Erasable;
 
+/// Returns whether or not the node is simple.
 fn show_current_node(
     node: &BookNode,
     first_page: Entity,
     second_page: Entity,
     commands: &mut Commands,
     fonts: &Res<FontAssets>,
-) {
+) -> bool {
     match node {
         Node::Fork { content, choices } => {
             commands.entity(first_page).with_children(|parent| {
@@ -271,86 +274,30 @@ fn show_current_node(
                         });
                 }
             });
+            false
         }
-        _ => unimplemented!("No simple nodes here"),
-    }
-}
-
-struct NodeChoice {
-    pub text: &'static str,
-    pub illustration: Handle<Image>,
-    pub next: usize,
-}
-
-impl GetNextNode for NodeChoice {
-    fn next_node(&self) -> usize {
-        self.next
+        Node::Simple { content, .. } => {
+            commands.entity(first_page).with_children(|parent| {
+                parent.spawn((
+                    TextBundle::from_section(
+                        *content,
+                        TextStyle {
+                            font: fonts.normal.clone(),
+                            font_size: 50.,
+                            color: Color::BLACK,
+                        },
+                    ),
+                    Erasable,
+                ));
+            });
+            // TODO: Missing illustration. Should it go on a NodeSimple generic?
+            true
+        }
     }
 }
 
 fn setup_graph(mut commands: Commands, textures: Res<TextureAssets>) {
-    let mut graph = Graph::new();
-    graph.add_node(
-        0,
-        Node::Fork {
-            content: "Érase una vez...",
-            choices: vec![
-                NodeChoice {
-                    text: "...un dragón, bastante normal, probablemente con problemas de autoestima, que atemorizaba la villa de Montblancun",
-                    illustration: textures.normal_dragon.clone(),
-                    next: 1,
-                },
-                NodeChoice {
-                    text: "...un humano con un disfraz de dragón cutre, que atemorizaba la villa de Montblanc",
-                    illustration: textures.sant_jordi_disguised_as_dragon.clone(),
-                    next: 2,
-                },
-            ],
-        },
-    );
-    graph.add_node(
-        1,
-        Node::Fork {
-            content: "Para tenerlo contento y alejado de la villa, los vecinos ofrecieron...",
-            choices: vec![
-                NodeChoice {
-                    text: "...calçots",
-                    illustration: textures.normal_dragon.clone(),
-                    next: 3,
-                },
-                NodeChoice {
-                    text: "...castells",
-                    illustration: textures.normal_dragon.clone(),
-                    next: 3,
-                },
-            ],
-        },
-    );
-    graph.add_node(
-        2,
-        Node::Fork {
-            content: "Para tenerlo contento y alejado de la villa, los vecinos ofrecieron...",
-            choices: vec![
-                NodeChoice {
-                    text: "...animales",
-                    illustration: textures.jordi_dragon_with_cow.clone(),
-                    next: 7,
-                },
-                NodeChoice {
-                    text: "...castells",
-                    illustration: textures.normal_dragon.clone(),
-                    next: 7,
-                },
-            ],
-        },
-    );
-    graph.add_node(
-        3,
-        Node::Fork {
-            content: "Pero no fue suficiente para alejarlo, por lo que tomaron otras medidas.",
-            choices: vec![NodeChoice { text: "La princesa Cleodolinda, cansada de los inútiles intentos de la gente de la villa por calmar la situación, se ofreció voluntaria para matar al dragón", illustration: textures.princess_go_kill_dragon.clone(), next: 5 }, NodeChoice { text: "La princesa Cleodolinda, deseosa por conocer a un dragón de verdad, se ofreció voluntaria y utilizar sus extensos conicimientos de dragones para solventar la situación", illustration: textures.princess_excited_to_be_picked.clone(), next: 6 }, NodeChoice { text: "Para sorpresa de todos, el propio Rey fue elegido en el sorteo. Preso de su propia cobardía, les dijo a todos que era la Princesa quien había salido.", illustration: textures.king_picks_princess.clone(), next: 8 }],
-        },
-    );
+    let graph = book_content::get_book_content(&textures);
     commands.insert_resource(graph);
 }
 

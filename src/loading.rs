@@ -57,6 +57,12 @@ pub struct TextureAssets {
     pub jordi_dragon_with_cow: Handle<Image>,
     #[asset(path = "textures/king-picks-princess.png")]
     pub king_picks_princess: Handle<Image>,
+    #[asset(path = "textures/sant-jordi-making-marshmallows.png")]
+    pub sant_jordi_making_marshmallows: Handle<Image>,
+    #[asset(path = "textures/sant-jordi-warrior.png")]
+    pub sant_jordi_warrior: Handle<Image>,
+    #[asset(path = "textures/sant-jordi-roses.png")]
+    pub sant_jordi_roses: Handle<Image>,
 }
 
 #[derive(AssetCollection, Resource)]
