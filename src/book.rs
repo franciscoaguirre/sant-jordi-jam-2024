@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     book_content::{self, BookGraph, BookNode},
-    graph::{GetNextNode, Graph, Node},
+    graph::Node,
     loading::{AnimationAssets, FontAssets, ModelAssets, TextureAssets},
     GameState,
 };

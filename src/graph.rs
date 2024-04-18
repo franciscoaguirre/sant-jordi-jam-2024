@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::collections::HashMap;
 use std::fmt;
 
@@ -96,18 +98,12 @@ impl<Content, Choice: GetNextNode> Graph<Content, Choice> {
 
     /// If the current node is simple.
     pub fn is_simple(&self) -> bool {
-        match self.get_current_node() {
-            Node::Simple { .. } => true,
-            _ => false,
-        }
+        matches!(self.get_current_node(), Node::Simple { .. })
     }
 
     /// If the current node is a fork.
     pub fn is_fork(&self) -> bool {
-        match self.get_current_node() {
-            Node::Fork { .. } => true,
-            _ => false,
-        }
+        matches!(self.get_current_node(), Node::Fork { .. })
     }
 
     /// Current node must be simple.
