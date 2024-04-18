@@ -15,6 +15,7 @@ impl Plugin for LoadingPlugin {
                 .continue_to_state(GameState::Menu)
                 .load_collection::<FontAssets>()
                 .load_collection::<ModelAssets>()
+                .load_collection::<AnimationAssets>()
                 .load_collection::<AudioAssets>()
                 .load_collection::<TextureAssets>(),
         );
@@ -48,6 +49,14 @@ pub struct TextureAssets {
     pub normal_dragon: Handle<Image>,
     #[asset(path = "textures/sant-jordi-disguised-as-dragon.png")]
     pub sant_jordi_disguised_as_dragon: Handle<Image>,
+    #[asset(path = "textures/princess-go-kill-dragon.png")]
+    pub princess_go_kill_dragon: Handle<Image>,
+    #[asset(path = "textures/princess-excited-to-be-picked.png")]
+    pub princess_excited_to_be_picked: Handle<Image>,
+    #[asset(path = "textures/jordi-dragon-with-cow.png")]
+    pub jordi_dragon_with_cow: Handle<Image>,
+    #[asset(path = "textures/king-picks-princess.png")]
+    pub king_picks_princess: Handle<Image>,
 }
 
 #[derive(AssetCollection, Resource)]
