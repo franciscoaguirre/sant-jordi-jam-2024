@@ -3,6 +3,7 @@
 mod actions;
 mod audio;
 mod book;
+mod graph;
 mod loading;
 mod menu;
 
