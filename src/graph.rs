@@ -1,9 +1,12 @@
 use std::collections::HashMap;
 use std::fmt;
 
+use bevy::prelude::*;
+
 /// Graph where nodes are added along with their indices.
 /// When adding nodes, you must be sure that they're all connected.
 /// The starting node must be added with index 0.
+#[derive(Resource)]
 pub struct Graph<Content, Choice> {
     nodes: HashMap<usize, Node<Content, Choice>>,
     current_node: usize,
