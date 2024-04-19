@@ -15,6 +15,7 @@ pub struct BookPlugin;
 impl Plugin for BookPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<Transition>()
+            .add_event::<AdvanceSimpleNode>()
             .add_event::<PageFlipStarted>()
             .add_event::<PageFlipEnded>()
             .add_systems(
@@ -29,6 +30,7 @@ impl Plugin for BookPlugin {
                     interact_with_options,
                     clear_book_content,
                     leave_only_chosen_option,
+                    advance_simple_node_listener,
                     flip_page,
                     flip_page_listener,
                 )
@@ -36,6 +38,9 @@ impl Plugin for BookPlugin {
             );
     }
 }
+
+#[derive(Event, Default)]
+pub struct AdvanceSimpleNode;
 
 #[derive(Event, Default)]
 pub struct PageFlipStarted;
@@ -55,6 +60,7 @@ pub enum Lifecycle {
     Choosing,
     Chosen,
     Transitioning,
+    SimpleNode,
 }
 
 impl Lifecycle {
@@ -65,6 +71,7 @@ impl Lifecycle {
             Choosing => Chosen,
             Chosen => Transitioning,
             Transitioning => ShowNode,
+            SimpleNode => Transitioning,
         }
     }
 }
@@ -113,7 +120,7 @@ fn flip_page(
     mut event_writer: EventWriter<Transition>,
     mut page_flip_started_writer: EventWriter<PageFlipStarted>,
 ) {
-    if let Lifecycle::Chosen = lifecycle.0 {
+    if matches!(lifecycle.0, Lifecycle::Chosen | Lifecycle::SimpleNode) {
         if keyboard_input.just_pressed(KeyCode::Space) {
             for mut player in players.iter_mut() {
                 player.start(animations.page_flip.clone());
@@ -121,6 +128,15 @@ fn flip_page(
                 page_flip_started_writer.send_default();
             }
         }
+    }
+}
+
+fn advance_simple_node_listener(
+    mut events: EventReader<AdvanceSimpleNode>,
+    mut graph: ResMut<BookGraph>,
+) {
+    for _ in events.read() {
+        graph.advance();
     }
 }
 
@@ -151,6 +167,7 @@ fn show_current_node_and_transition(
     graph: Res<BookGraph>,
     mut lifecycle: ResMut<LifecycleManager>,
     mut event_writer: EventWriter<Transition>,
+    mut advance_simple_node: EventWriter<AdvanceSimpleNode>,
     first_page: Query<Entity, With<FirstPage>>,
     second_page: Query<Entity, With<SecondPage>>,
     mut commands: Commands,
@@ -167,7 +184,8 @@ fn show_current_node_and_transition(
             &fonts,
         );
         if is_simple {
-            lifecycle.0 = Lifecycle::Chosen;
+            lifecycle.0 = Lifecycle::SimpleNode;
+            advance_simple_node.send_default();
         } else {
             event_writer.send(Transition);
         }
