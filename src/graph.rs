@@ -96,12 +96,7 @@ impl<Content, Choice: GetNextNode> Graph<Content, Choice> {
         }
     }
 
-    /// If the current node is simple.
-    pub fn is_simple(&self) -> bool {
-        matches!(self.get_current_node(), Node::Simple { .. })
-    }
-
-    /// If the current node is a fork.
+    /// Returns whether or not the current node is a fork.
     pub fn is_fork(&self) -> bool {
         matches!(self.get_current_node(), Node::Fork { .. })
     }

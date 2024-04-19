@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 use bevy::prelude::*;
 
 use crate::{
@@ -120,13 +122,13 @@ fn flip_page(
     mut event_writer: EventWriter<Transition>,
     mut page_flip_started_writer: EventWriter<PageFlipStarted>,
 ) {
-    if matches!(lifecycle.0, Lifecycle::Chosen | Lifecycle::SimpleNode) {
-        if keyboard_input.just_pressed(KeyCode::Space) {
-            for mut player in players.iter_mut() {
-                player.start(animations.page_flip.clone());
-                event_writer.send_default();
-                page_flip_started_writer.send_default();
-            }
+    if matches!(lifecycle.0, Lifecycle::Chosen | Lifecycle::SimpleNode)
+        && keyboard_input.just_pressed(KeyCode::Space)
+    {
+        for mut player in players.iter_mut() {
+            player.start(animations.page_flip.clone());
+            event_writer.send_default();
+            page_flip_started_writer.send_default();
         }
     }
 }
@@ -166,7 +168,7 @@ fn transition_listener(
 fn show_current_node_and_transition(
     graph: Res<BookGraph>,
     mut lifecycle: ResMut<LifecycleManager>,
-    mut event_writer: EventWriter<Transition>,
+    mut transition: EventWriter<Transition>,
     mut advance_simple_node: EventWriter<AdvanceSimpleNode>,
     first_page: Query<Entity, With<FirstPage>>,
     second_page: Query<Entity, With<SecondPage>>,
@@ -187,7 +189,7 @@ fn show_current_node_and_transition(
             lifecycle.0 = Lifecycle::SimpleNode;
             advance_simple_node.send_default();
         } else {
-            event_writer.send(Transition);
+            transition.send_default();
         }
     }
 }
