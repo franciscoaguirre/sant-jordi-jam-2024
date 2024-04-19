@@ -9,15 +9,17 @@ use bevy::prelude::*;
 /// When adding nodes, you must be sure that they're all connected.
 /// The starting node must be added with index 0.
 #[derive(Resource)]
-pub struct Graph<Content, Choice> {
-    nodes: HashMap<usize, Node<Content, Choice>>,
+pub struct Graph<Content, Simple, Choice> {
+    nodes: HashMap<usize, Node<Content, Simple, Choice>>,
     current_node: usize,
 }
 
-impl<Content: fmt::Debug, Choice: fmt::Debug + GetNextNode> fmt::Debug for Graph<Content, Choice> {
+impl<Content: fmt::Debug, Simple: fmt::Debug, Choice: fmt::Debug + GetNextNode> fmt::Debug
+    for Graph<Content, Simple, Choice>
+{
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fn print_node<Content: fmt::Debug, Choice: fmt::Debug + GetNextNode>(
-            graph: &Graph<Content, Choice>,
+        fn print_node<Content: fmt::Debug, Simple: fmt::Debug, Choice: fmt::Debug + GetNextNode>(
+            graph: &Graph<Content, Simple, Choice>,
             node_index: usize,
             depth: usize,
             f: &mut fmt::Formatter<'_>,
@@ -54,9 +56,10 @@ impl<Content: fmt::Debug, Choice: fmt::Debug + GetNextNode> fmt::Debug for Graph
 }
 
 #[derive(Debug)]
-pub enum Node<Content, Choice> {
+pub enum Node<Content, Simple, Choice> {
     Simple {
         content: Content,
+        extra: Simple,
         next: Option<usize>,
     },
     Fork {
@@ -69,7 +72,7 @@ pub trait GetNextNode {
     fn next_node(&self) -> usize;
 }
 
-impl<Content, Choice: GetNextNode> Graph<Content, Choice> {
+impl<Content, Simple, Choice: GetNextNode> Graph<Content, Simple, Choice> {
     pub fn new() -> Self {
         Self {
             nodes: HashMap::new(),
@@ -77,11 +80,11 @@ impl<Content, Choice: GetNextNode> Graph<Content, Choice> {
         }
     }
 
-    pub fn add_node(&mut self, index: usize, node: Node<Content, Choice>) {
+    pub fn add_node(&mut self, index: usize, node: Node<Content, Simple, Choice>) {
         self.nodes.insert(index, node);
     }
 
-    pub fn get_current_node(&self) -> &Node<Content, Choice> {
+    pub fn get_current_node(&self) -> &Node<Content, Simple, Choice> {
         self.nodes.get(&self.current_node).unwrap()
     }
 
@@ -133,6 +136,8 @@ mod tests {
         text: String,
     }
 
+    type TestSimple = ();
+
     #[derive(Debug)]
     struct TestChoice {
         title: String,
@@ -154,13 +159,14 @@ mod tests {
     ///       C - D
     #[test]
     fn simple_graph_works() {
-        let mut graph = Graph::<TestContent, TestChoice>::new();
+        let mut graph = Graph::<TestContent, TestSimple, TestChoice>::new();
         graph.add_node(
             0,
             Node::Simple {
                 content: TestContent {
                     text: "Z".to_string(),
                 },
+                extra: (),
                 next: Some(1),
             },
         );
@@ -190,6 +196,7 @@ mod tests {
                 content: TestContent {
                     text: "B".to_string(),
                 },
+                extra: (),
                 next: None,
             },
         );
@@ -199,6 +206,7 @@ mod tests {
                 content: TestContent {
                     text: "C".to_string(),
                 },
+                extra: (),
                 next: Some(4),
             },
         );
@@ -208,6 +216,7 @@ mod tests {
                 content: TestContent {
                     text: "D".to_string(),
                 },
+                extra: (),
                 next: None,
             },
         );

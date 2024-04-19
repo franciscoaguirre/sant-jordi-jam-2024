@@ -53,6 +53,8 @@ pub struct TextureAssets {
     pub princess_go_kill_dragon: Handle<Image>,
     #[asset(path = "textures/princess-excited-to-be-picked.png")]
     pub princess_excited_to_be_picked: Handle<Image>,
+    #[asset(path = "textures/dragon-with-cow.png")]
+    pub dragon_with_cow: Handle<Image>,
     #[asset(path = "textures/jordi-dragon-with-cow.png")]
     pub jordi_dragon_with_cow: Handle<Image>,
     #[asset(path = "textures/king-picks-princess.png")]

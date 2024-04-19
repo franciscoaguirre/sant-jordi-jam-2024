@@ -296,7 +296,7 @@ fn show_current_node(
             });
             false
         }
-        Node::Simple { content, .. } => {
+        Node::Simple { content, extra, .. } => {
             commands.entity(first_page).with_children(|parent| {
                 parent.spawn((
                     TextBundle::from_section(
@@ -310,7 +310,15 @@ fn show_current_node(
                     Erasable,
                 ));
             });
-            // TODO: Missing illustration. Should it go on a NodeSimple generic?
+            commands.entity(second_page).with_children(|parent| {
+                parent.spawn((
+                    ImageBundle {
+                        image: extra.illustration.clone().into(),
+                        ..default()
+                    },
+                    Erasable,
+                ));
+            });
             true
         }
     }

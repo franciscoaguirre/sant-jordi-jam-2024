@@ -5,8 +5,12 @@ use crate::{
     loading::TextureAssets,
 };
 
-pub type BookGraph = Graph<&'static str, NodeChoice>;
-pub type BookNode = Node<&'static str, NodeChoice>;
+pub type BookGraph = Graph<&'static str, SimpleExtra, NodeChoice>;
+pub type BookNode = Node<&'static str, SimpleExtra, NodeChoice>;
+
+pub struct SimpleExtra {
+    pub illustration: Handle<Image>,
+}
 
 pub struct NodeChoice {
     pub text: &'static str,
@@ -44,6 +48,9 @@ pub fn get_book_content(textures: &Res<TextureAssets>) -> BookGraph {
         1,
         Node::Simple {
             content: "Para tenerlo contento y alejado de la villa, los vecinos ofrecieron animales",
+            extra: SimpleExtra {
+                illustration: textures.dragon_with_cow.clone(),
+            },
             next: Some(3),
         },
     );
@@ -51,6 +58,9 @@ pub fn get_book_content(textures: &Res<TextureAssets>) -> BookGraph {
         2,
         Node::Simple {
             content: "Para tenerlo contento y alejado de la villa, los vecinos ofrecieron animales",
+            extra: SimpleExtra {
+                illustration: textures.jordi_dragon_with_cow.clone(),
+            },
             next: Some(4),
         },
     );
@@ -85,17 +95,17 @@ pub fn get_book_content(textures: &Res<TextureAssets>) -> BookGraph {
                 NodeChoice {
                     text: "La princesa Cleodolinda, cansada de los inútiles intentos de la gente de la villa por calmar la situación, se ofreció voluntaria para matar al dragón",
                     illustration: textures.princess_go_kill_dragon.clone(),
-                    next: 5
+                    next: 4
                 },
                 NodeChoice {
                     text: "La princesa Cleodolinda, deseosa por conocer a un dragón de verdad, se ofreció voluntaria y utilizar sus extensos conicimientos de dragones para solventar la situación",
                     illustration: textures.princess_excited_to_be_picked.clone(),
-                    next: 8
+                    next: 4
                 },
                 NodeChoice {
                     text: "Para sorpresa de todos, el propio Rey fue elegido en el sorteo. Preso de su propia cobardía, les dijo a todos que era la Princesa quien había salido.",
                     illustration: textures.king_picks_princess.clone(),
-                    next: 100
+                    next: 4
                 }
             ],
         },
@@ -104,7 +114,10 @@ pub fn get_book_content(textures: &Res<TextureAssets>) -> BookGraph {
         5,
         Node::Simple {
             content: "Cleodolinda salió de las murallas y se dirigió a su destino. Donde se encontró... Al dragón sentado junto a una hoguera asando malvaviscos. Actividad algo extraña para un dragón...",
-            next: Some(7)
+            extra: SimpleExtra {
+                illustration: textures.sant_jordi_making_marshmallows.clone(),
+            },
+            next: Some(5)
         }
     );
     graph.add_node(
@@ -116,30 +129,30 @@ pub fn get_book_content(textures: &Res<TextureAssets>) -> BookGraph {
                 NodeChoice {
                     text: "A un Sant Jordi muy flipado preparándose para la batalla con el dragón",
                     illustration: textures.sant_jordi_warrior.clone(),
-                    next: 0,
+                    next: 6,
                 },
                 NodeChoice {
                     text: "A Sant Jordi, sonrojado y sosteniendo un ramo de rosas.",
                     illustration: textures.sant_jordi_roses.clone(),
-                    next: 0,
+                    next: 6,
                 },
             ],
         },
     );
-    graph.add_node(
-        7,
-        Node::Simple { content: "Pero Cleodolinda, decidida a llevar a cabo su tarea, se partió la crisma con el dragón.", next: None }
-    );
-    graph.add_node(
-        8,
-        Node::Simple {
-            content: "Cleodolinda salió de las murallas y se dirigió a su destino. Donde se encontró... Al dragón sentado junto a una hoguera asando malvaviscos. Actividad algo extraña para un dragón...",
-            next: Some(9)
-        }
-    );
-    graph.add_node(
-        9,
-        Node::Simple { content: "Pero era difícil engañar a la fan número uno de los dragones. Ese dragón era claramente un humano.", next: None }
-    );
+    // graph.add_node(
+    //     7,
+    //     Node::Simple { content: "Pero Cleodolinda, decidida a llevar a cabo su tarea, se partió la crisma con el dragón.", next: None }
+    // );
+    // graph.add_node(
+    //     8,
+    //     Node::Simple {
+    //         content: "Cleodolinda salió de las murallas y se dirigió a su destino. Donde se encontró... Al dragón sentado junto a una hoguera asando malvaviscos. Actividad algo extraña para un dragón...",
+    //         next: Some(9)
+    //     }
+    // );
+    // graph.add_node(
+    //     9,
+    //     Node::Simple { content: "Pero era difícil engañar a la fan número uno de los dragones. Ese dragón era claramente un humano.", next: None }
+    // );
     graph
 }
