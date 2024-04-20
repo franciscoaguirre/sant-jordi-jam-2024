@@ -432,10 +432,10 @@ fn setup_book(mut commands: Commands, models: Res<ModelAssets>) {
                         padding: UiRect::all(Val::Px(20.0)),
                         display: Display::Flex,
                         flex_direction: FlexDirection::Column,
-                        border: UiRect::all(Val::Px(2.)),
+                        // border: UiRect::all(Val::Px(2.)),
                         ..default()
                     },
-                    border_color: Color::RED.into(),
+                    // border_color: Color::RED.into(),
                     ..default()
                 },
                 FirstPage,
@@ -452,10 +452,10 @@ fn setup_book(mut commands: Commands, models: Res<ModelAssets>) {
                         flex_direction: FlexDirection::Column,
                         justify_content: JustifyContent::SpaceAround,
                         margin: UiRect::left(Val::Px(40.0)),
-                        border: UiRect::all(Val::Px(2.)),
+                        // border: UiRect::all(Val::Px(2.)),
                         ..default()
                     },
-                    border_color: Color::RED.into(),
+                    // border_color: Color::RED.into(),
                     ..default()
                 },
                 SecondPage,
