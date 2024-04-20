@@ -101,13 +101,14 @@ fn draw_chosen_option(
         let OptionChosen { index, text, image } = event;
         graph.choose(*index);
         let mut first_page = commands.entity(first_page.single());
+        // TODO: Also grab second page to put the additional text.
         first_page.with_children(|parent| {
             parent.spawn((
                 TextBundle::from_section(
                     text.clone(),
                     TextStyle {
                         font: fonts.normal.clone(),
-                        font_size: 35.,
+                        font_size: 30.,
                         color: Color::BLACK,
                     },
                 ),

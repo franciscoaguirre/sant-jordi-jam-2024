@@ -9,17 +9,27 @@ use bevy::prelude::*;
 /// When adding nodes, you must be sure that they're all connected.
 /// The starting node must be added with index 0.
 #[derive(Resource)]
-pub struct Graph<Content, Simple, Choice> {
+pub struct Graph<Content, Simple, Choice, Context> {
     nodes: HashMap<usize, Node<Content, Simple, Choice>>,
     current_node: usize,
+    context: Context,
 }
 
-impl<Content: fmt::Debug, Simple: fmt::Debug, Choice: fmt::Debug + GetNextNode> fmt::Debug
-    for Graph<Content, Simple, Choice>
+impl<
+        Content: fmt::Debug,
+        Simple: fmt::Debug,
+        Choice: fmt::Debug + ChoiceTrait<Context>,
+        Context: fmt::Debug,
+    > fmt::Debug for Graph<Content, Simple, Choice, Context>
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fn print_node<Content: fmt::Debug, Simple: fmt::Debug, Choice: fmt::Debug + GetNextNode>(
-            graph: &Graph<Content, Simple, Choice>,
+        fn print_node<
+            Content: fmt::Debug,
+            Simple: fmt::Debug,
+            Choice: fmt::Debug + ChoiceTrait<Context>,
+            Context: fmt::Debug,
+        >(
+            graph: &Graph<Content, Simple, Choice, Context>,
             node_index: usize,
             depth: usize,
             f: &mut fmt::Formatter<'_>,
@@ -39,7 +49,7 @@ impl<Content: fmt::Debug, Simple: fmt::Debug, Choice: fmt::Debug + GetNextNode> 
                     Node::Fork { choices, .. } => {
                         for choice in choices.iter() {
                             writeln!(f)?;
-                            print_node(graph, choice.next_node(), depth + 1, f)?;
+                            print_node(graph, choice.next_node(&graph.context), depth + 1, f)?;
                         }
                     }
                 };
@@ -68,15 +78,19 @@ pub enum Node<Content, Simple, Choice> {
     },
 }
 
-pub trait GetNextNode {
-    fn next_node(&self) -> usize;
+pub trait ChoiceTrait<Context> {
+    fn next_node(&self, context: &Context) -> usize;
+    fn change_state(&self, context: &mut Context);
 }
 
-impl<Content, Simple, Choice: GetNextNode> Graph<Content, Simple, Choice> {
+impl<Content, Simple, Choice: ChoiceTrait<Context> + Clone, Context: Default>
+    Graph<Content, Simple, Choice, Context>
+{
     pub fn new() -> Self {
         Self {
             nodes: HashMap::new(),
             current_node: 0,
+            context: Default::default(),
         }
     }
 
@@ -92,7 +106,7 @@ impl<Content, Simple, Choice: GetNextNode> Graph<Content, Simple, Choice> {
         self.current_node = 0;
     }
 
-    pub fn get_content(&self) -> &Content {
+    pub fn get_content(&mut self) -> &Content {
         match self.get_current_node() {
             Node::Simple { content, .. } => content,
             Node::Fork { content, .. } => content,
@@ -100,7 +114,7 @@ impl<Content, Simple, Choice: GetNextNode> Graph<Content, Simple, Choice> {
     }
 
     /// Returns whether or not the current node is a fork.
-    pub fn is_fork(&self) -> bool {
+    pub fn is_fork(&mut self) -> bool {
         matches!(self.get_current_node(), Node::Fork { .. })
     }
 
@@ -118,12 +132,16 @@ impl<Content, Simple, Choice: GetNextNode> Graph<Content, Simple, Choice> {
 
     /// Current node must be a fork.
     pub fn choose(&mut self, index: usize) {
-        match self.get_current_node() {
+        let (next_node, choice) = match self.get_current_node() {
             Node::Fork { choices, .. } => {
-                self.current_node = choices[index].next_node();
+                let next = choices[index].next_node(&self.context);
+                let choice = choices[index].clone();
+                (next, choice)
             }
             _ => panic!("Current node was not a fork."),
-        }
+        };
+        choice.change_state(&mut self.context);
+        self.current_node = next_node;
     }
 }
 
@@ -138,17 +156,24 @@ mod tests {
 
     type TestSimple = ();
 
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
     struct TestChoice {
         title: String,
         subtitle: String,
         next: usize,
     }
 
-    impl GetNextNode for TestChoice {
-        fn next_node(&self) -> usize {
+    impl ChoiceTrait<TestContext> for TestChoice {
+        fn next_node(&self, context: &TestContext) -> usize {
             self.next
         }
+
+        fn change_state(&mut self, context: &mut TestContext) {}
+    }
+
+    #[derive(Debug, Default)]
+    struct TestContext {
+        some_flag: bool,
     }
 
     /// The graph looks like this:
@@ -159,7 +184,7 @@ mod tests {
     ///       C - D
     #[test]
     fn simple_graph_works() {
-        let mut graph = Graph::<TestContent, TestSimple, TestChoice>::new();
+        let mut graph = Graph::<TestContent, TestSimple, TestChoice, TestContext>::new();
         graph.add_node(
             0,
             Node::Simple {
