@@ -12,7 +12,7 @@ use bevy::prelude::*;
 pub struct Graph<Content, Simple, Choice, Context> {
     nodes: HashMap<usize, Node<Content, Simple, Choice>>,
     current_node: usize,
-    context: Context,
+    pub context: Context,
 }
 
 impl<

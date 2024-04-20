@@ -93,15 +93,20 @@ fn setup_lifecycle(mut commands: Commands) {
 fn draw_chosen_option(
     mut commands: Commands,
     first_page: Query<Entity, With<FirstPage>>,
+    second_page: Query<Entity, With<SecondPage>>,
     fonts: Res<FontAssets>,
     mut events: EventReader<OptionChosen>,
     mut graph: ResMut<BookGraph>,
 ) {
     for event in events.read() {
+        let current_node = graph.get_current_node();
+        let Node::Fork { choices, .. } = current_node else {
+            unreachable!("An option was chosen, it's a fork.");
+        };
+        // TODO: I could get everything from `current_node`.
         let OptionChosen { index, text, image } = event;
-        graph.choose(*index);
+        let chosen_option = &choices[*index];
         let mut first_page = commands.entity(first_page.single());
-        // TODO: Also grab second page to put the additional text.
         first_page.with_children(|parent| {
             parent.spawn((
                 TextBundle::from_section(
@@ -122,6 +127,21 @@ fn draw_chosen_option(
                 Erasable,
             ));
         });
+        let mut second_page = commands.entity(second_page.single());
+        second_page.with_children(|parent| {
+            parent.spawn((
+                TextBundle::from_section(
+                    (chosen_option.additional_text)(&graph.context).clone(),
+                    TextStyle {
+                        font: fonts.normal.clone(),
+                        font_size: 30.,
+                        color: Color::BLACK,
+                    },
+                ),
+                Erasable,
+            ));
+        });
+        graph.choose(*index);
     }
 }
 
