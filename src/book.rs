@@ -18,8 +18,9 @@ impl Plugin for BookPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<Transition>()
             .add_event::<AdvanceSimpleNode>()
-            .add_event::<PageFlipStarted>()
+            .add_event::<EraseEverything>()
             .add_event::<PageFlipEnded>()
+            .add_event::<OptionChosen>()
             .add_systems(
                 OnEnter(GameState::Playing),
                 (setup_book, setup_graph, setup_lifecycle),
@@ -30,8 +31,8 @@ impl Plugin for BookPlugin {
                     transition_listener,
                     show_current_node_and_transition,
                     interact_with_options,
-                    clear_book_content,
-                    leave_only_chosen_option,
+                    erase_everything_listener,
+                    draw_chosen_option,
                     advance_simple_node_listener,
                     flip_page,
                     flip_page_listener,
@@ -41,11 +42,18 @@ impl Plugin for BookPlugin {
     }
 }
 
-#[derive(Event, Default)]
-pub struct AdvanceSimpleNode;
+#[derive(Event)]
+pub struct OptionChosen {
+    index: usize,
+    text: String,
+    image: Handle<Image>,
+}
 
 #[derive(Event, Default)]
-pub struct PageFlipStarted;
+pub struct EraseEverything;
+
+#[derive(Event, Default)]
+pub struct AdvanceSimpleNode;
 
 #[derive(Event, Default)]
 pub struct PageFlipEnded;
@@ -82,30 +90,44 @@ fn setup_lifecycle(mut commands: Commands) {
     commands.insert_resource(LifecycleManager(Lifecycle::ShowNode));
 }
 
-fn leave_only_chosen_option(
+fn draw_chosen_option(
     mut commands: Commands,
-    lifecycle: Res<LifecycleManager>,
-    mut chosen_option_query: Query<(Entity, &mut BackgroundColor, &mut Style), With<ChosenOption>>,
-    other_options_query: Query<Entity, (With<ChoicesOption>, Without<ChosenOption>)>,
     first_page: Query<Entity, With<FirstPage>>,
+    fonts: Res<FontAssets>,
+    mut events: EventReader<OptionChosen>,
+    mut graph: ResMut<BookGraph>,
 ) {
-    if let Lifecycle::Chosen = lifecycle.0 {
-        for entity in other_options_query.iter() {
-            commands.get_entity(entity).unwrap().despawn_recursive();
-        }
-        let mut first_page = commands.get_entity(first_page.single()).unwrap();
-        let (chosen_option, mut background_color, mut style) = chosen_option_query.single_mut();
-        *background_color = Color::NONE.into();
-        style.justify_self = JustifySelf::End;
-        style.align_self = AlignSelf::Center;
-        first_page.add_child(chosen_option);
+    for event in events.read() {
+        let OptionChosen { index, text, image } = event;
+        graph.choose(*index);
+        let mut first_page = commands.entity(first_page.single());
+        first_page.with_children(|parent| {
+            parent.spawn((
+                TextBundle::from_section(
+                    text.clone(),
+                    TextStyle {
+                        font: fonts.normal.clone(),
+                        font_size: 35.,
+                        color: Color::BLACK,
+                    },
+                ),
+                Erasable,
+            ));
+            parent.spawn((
+                ImageBundle {
+                    image: image.clone().into(),
+                    ..default()
+                },
+                Erasable,
+            ));
+        });
     }
 }
 
-fn clear_book_content(
+fn erase_everything_listener(
     mut commands: Commands,
     erasable_query: Query<Entity, With<Erasable>>,
-    mut events: EventReader<PageFlipStarted>,
+    mut events: EventReader<EraseEverything>,
 ) {
     for _ in events.read() {
         for entity in erasable_query.iter() {
@@ -120,7 +142,7 @@ fn flip_page(
     mut players: Query<&mut AnimationPlayer>,
     animations: Res<AnimationAssets>,
     mut event_writer: EventWriter<Transition>,
-    mut page_flip_started_writer: EventWriter<PageFlipStarted>,
+    mut erase_everything: EventWriter<EraseEverything>,
 ) {
     if matches!(lifecycle.0, Lifecycle::Chosen | Lifecycle::SimpleNode)
         && keyboard_input.just_pressed(KeyCode::Space)
@@ -128,7 +150,7 @@ fn flip_page(
         for mut player in players.iter_mut() {
             player.start(animations.page_flip.clone());
             event_writer.send_default();
-            page_flip_started_writer.send_default();
+            erase_everything.send_default();
         }
     }
 }
@@ -195,17 +217,24 @@ fn show_current_node_and_transition(
 }
 
 fn interact_with_options(
-    mut commands: Commands,
     lifecycle: Res<LifecycleManager>,
     mut interaction_query: Query<
-        (&Interaction, &ChoicesOption, &mut BackgroundColor, Entity),
+        (
+            &Interaction,
+            &ChoicesOption,
+            &mut BackgroundColor,
+            &Children,
+        ),
         (Changed<Interaction>, With<ChoicesOption>),
     >,
-    mut graph: ResMut<BookGraph>,
-    mut event_writer: EventWriter<Transition>,
+    text_query: Query<&Text>,
+    image_query: Query<&UiImage>,
+    mut option_chosen: EventWriter<OptionChosen>,
+    mut transition: EventWriter<Transition>,
+    mut erase_everything: EventWriter<EraseEverything>,
 ) {
     if let Lifecycle::Choosing = lifecycle.0 {
-        for (interaction, choice, mut background_color, entity) in interaction_query.iter_mut() {
+        for (interaction, choice, mut background_color, children) in interaction_query.iter_mut() {
             match *interaction {
                 Interaction::Hovered => {
                     *background_color = BUTTON_HOVER_COLOR.into();
@@ -215,9 +244,15 @@ fn interact_with_options(
                 }
                 Interaction::Pressed => {
                     *background_color = BUTTON_PRESSED_COLOR.into();
-                    graph.choose(choice.0);
-                    event_writer.send(Transition);
-                    commands.get_entity(entity).unwrap().insert(ChosenOption);
+                    let image = image_query.get(children[0]).unwrap();
+                    let text = text_query.get(children[1]).unwrap();
+                    option_chosen.send(OptionChosen {
+                        index: choice.0,
+                        text: text.sections[0].value.clone(),
+                        image: image.texture.clone(),
+                    });
+                    erase_everything.send_default();
+                    transition.send_default();
                 }
             }
         }
@@ -228,7 +263,7 @@ fn interact_with_options(
 pub struct ChoicesOption(pub usize);
 
 #[derive(Component)]
-pub struct ChosenOption;
+pub struct MainText;
 
 #[derive(Component)]
 pub struct Erasable;
@@ -257,6 +292,7 @@ fn show_current_node(
                 ));
             });
             commands.entity(second_page).with_children(|parent| {
+                let number_of_choices = choices.len();
                 for (index, choice) in choices.iter().enumerate() {
                     parent
                         .spawn((
@@ -264,11 +300,13 @@ fn show_current_node(
                                 background_color: Color::NONE.into(),
                                 style: Style {
                                     display: Display::Flex,
-                                    flex_direction: FlexDirection::Column,
+                                    flex_direction: FlexDirection::Row,
                                     align_items: AlignItems::Center,
                                     margin: UiRect::top(Val::Px(if index == 0 { 0. } else { 10. })),
+                                    border: UiRect::all(Val::Px(2.0)),
                                     ..default()
                                 },
+                                border_color: Color::BLACK.into(),
                                 ..default()
                             },
                             ChoicesOption(index),
@@ -278,19 +316,30 @@ fn show_current_node(
                             parent.spawn(ImageBundle {
                                 image: choice.illustration.clone().into(),
                                 style: Style {
-                                    width: Val::Px(150.),
+                                    height: Val::Px(150.),
                                     ..default()
                                 },
                                 ..default()
                             });
-                            parent.spawn(TextBundle::from_section(
-                                choice.text,
-                                TextStyle {
-                                    font: fonts.normal.clone(),
-                                    font_size: 20.,
-                                    color: Color::BLACK,
+                            parent.spawn(TextBundle {
+                                text: Text {
+                                    sections: vec![TextSection {
+                                        value: choice.text.to_string(),
+                                        style: TextStyle {
+                                            font: fonts.normal.clone(),
+                                            font_size: if number_of_choices == 3 {
+                                                25.
+                                            } else {
+                                                30.
+                                            },
+                                            color: Color::BLACK,
+                                        },
+                                    }],
+                                    ..default()
                                 },
-                            ));
+                                style: Style { ..default() },
+                                ..default()
+                            });
                         });
                 }
             });
@@ -337,7 +386,7 @@ pub struct SecondPage;
 
 fn setup_book(mut commands: Commands, models: Res<ModelAssets>) {
     commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(-1.0, 3.0, 0.0).looking_at(Vec3::ZERO, Vec3::Y),
+        transform: Transform::from_xyz(-0.5, 3.0, 0.0).looking_at(Vec3::ZERO, Vec3::Y),
         camera: Camera {
             order: 1,
             ..default()
@@ -383,10 +432,10 @@ fn setup_book(mut commands: Commands, models: Res<ModelAssets>) {
                         padding: UiRect::all(Val::Px(20.0)),
                         display: Display::Flex,
                         flex_direction: FlexDirection::Column,
-                        // border: UiRect::all(Val::Px(2.)),
+                        border: UiRect::all(Val::Px(2.)),
                         ..default()
                     },
-                    // border_color: Color::RED.into(),
+                    border_color: Color::RED.into(),
                     ..default()
                 },
                 FirstPage,
@@ -396,17 +445,17 @@ fn setup_book(mut commands: Commands, models: Res<ModelAssets>) {
             children.spawn((
                 NodeBundle {
                     style: Style {
-                        width: Val::Percent(30.0),
+                        width: Val::Percent(35.0),
                         height: Val::Percent(80.0),
                         padding: UiRect::all(Val::Px(20.0)),
                         display: Display::Flex,
                         flex_direction: FlexDirection::Column,
                         justify_content: JustifyContent::SpaceAround,
                         margin: UiRect::left(Val::Px(40.0)),
-                        // border: UiRect::all(Val::Px(2.)),
+                        border: UiRect::all(Val::Px(2.)),
                         ..default()
                     },
-                    // border_color: Color::RED.into(),
+                    border_color: Color::RED.into(),
                     ..default()
                 },
                 SecondPage,

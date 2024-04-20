@@ -29,15 +29,15 @@ pub fn get_book_content(textures: &Res<TextureAssets>) -> BookGraph {
     graph.add_node(
         0,
         Node::Fork {
-            content: "Érase una vez...",
+            content: "Érase una vez, un terrible dragón que atemorizaba la villa de Montblanc...",
             choices: vec![
                 NodeChoice {
-                    text: "...un dragón, bastante normal, probablemente con problemas de autoestima, que atemorizaba la villa de Montblancun",
+                    text: "Érase una vez, un dragón normalito, con sus problemas y sus cosas, cuya presencia atemorizaba la villa de Montblanc...",
                     illustration: textures.normal_dragon.clone(),
                     next: 1,
                 },
                 NodeChoice {
-                    text: "...un humano con un disfraz de dragón cutre, que atemorizaba la villa de Montblanc",
+                    text: "Érase una vez, un hombre claramente disfrazado de dragón que, por algún motivo, atemorizaba la villa de Montblanc...",
                     illustration: textures.sant_jordi_disguised_as_dragon.clone(),
                     next: 2,
                 },
