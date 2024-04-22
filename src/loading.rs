@@ -54,6 +54,18 @@ pub struct UiTextures {
     pub rabbit_troubadour: Handle<Image>,
     #[asset(path = "textures/roses-frame.png")]
     pub roses_frame: Handle<Image>,
+    #[asset(path = "textures/keyboard.png")]
+    pub keyboard: Handle<Image>,
+    #[asset(path = "textures/mouse.png")]
+    pub mouse: Handle<Image>,
+    #[asset(path = "textures/warrior-bunny.png")]
+    pub warrior_bunny: Handle<Image>,
+    #[asset(path = "textures/bat.png")]
+    pub bat: Handle<Image>,
+    #[asset(path = "textures/cat.png")]
+    pub cat: Handle<Image>,
+    #[asset(path = "textures/snail-boy.png")]
+    pub snail_boy: Handle<Image>,
 }
 
 // TODO: Not using IMG_25.png

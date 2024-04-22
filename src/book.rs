@@ -383,14 +383,17 @@ fn show_current_node(
             });
             commands.entity(second_page).with_children(|parent| {
                 parent
-                    .spawn(NodeBundle {
-                        style: Style {
-                            position_type: PositionType::Relative,
-                            width: Val::Percent(100.),
+                    .spawn((
+                        NodeBundle {
+                            style: Style {
+                                position_type: PositionType::Relative,
+                                width: Val::Percent(100.),
+                                ..default()
+                            },
                             ..default()
                         },
-                        ..default()
-                    })
+                        Erasable,
+                    ))
                     .with_children(|parent| {
                         parent.spawn(ImageBundle {
                             image: textures.roses_frame.clone().into(),
@@ -480,7 +483,7 @@ fn show_current_node(
 fn setup_graph(mut commands: Commands, illustrations: Res<Illustrations>) {
     let mut graph = book_content::get_book_content(&illustrations);
     // TODO: For testing, remove.
-    graph.set_current_node(1);
+    // graph.set_current_node(1);
     commands.insert_resource(graph);
 }
 
