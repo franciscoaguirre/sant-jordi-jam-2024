@@ -180,7 +180,7 @@ pub fn get_book_content(textures: &Res<Illustrations>) -> BookGraph {
     graph.add_node(
         7,
         Node::Simple {
-            content: arc!("Al final, el dragón y la princesa se vieron convertidos en unos improbables aliados ante la idiotez de Sant Jordi y el pueblo, por lo que acordaron una manera que, por fin, pondría un final a la disputa... (dibujo de Cleodolinda pisando la cabeza del Sant Jordi disfrazado de dragón delante de Montblanc mientras el dragón observa orgulloso de fondo oculto)."),
+            content: arc!("Al final, el dragón y la princesa se vieron convertidos en unos improbables aliados ante la idiotez de Sant Jordi y el pueblo, por lo que acordaron una manera que, por fin, pondría un final a la disputa..."),
             extra: SimpleExtra {
                 illustration: Some(textures.princess_x_dragon.clone()),
                 additional_text: arc!("Y así, la villa de Montblanc regresó a la normalidad y tranquilidad que la caracterizaba... Al menos, hasta que apareciese el siguiente \"dragón\"..."),
@@ -238,14 +238,14 @@ pub fn get_book_content(textures: &Res<Illustrations>) -> BookGraph {
             content: arc!("Sant Jordi, sacando pecho y guiñándole un ojo, le dijo a Cleodolinda: \"tranquila princesa, yo me encargo del dragoncito\". Y sin esperar respuesta, el caballero se adentró en las profundidades de la cueva de la bestia. Entonces, Cleodolinda decidió..."),
             choices: vec![
                 NodeChoice {
-                    text: arc!("...entrar con Sant Jordi en la cueva."),
+                    text: arc!("Cleodolinda decidió entrar con Sant Jordi en la cueva."),
                     illustration: None,
                     additional_text: arc!(|context| if context.princesa_guerrera { "Cleodolinda, todavía con ganas de algo de acción, siguió al caballero procurando que no la viera." } else if context.fan_dragones { "Cleodolinda, demasiado ansiosa por la posibilidad de ver un dragón real, siguió de cerca a Sant Jordi y se adentró tras él en la guarida de la criatura." } else if context.princesa_rechazada { "No creyéndose del todo al quizás algo flipado caballero, Cleodolinda le siguió de cerca y se adentró en la guarida de la bestia." } else { unreachable!("Some flag should have been set.") }),
                     state_change: arc!(|context| context.entrar_cueva = true),
                     next: arc!(13),
                 },
                 NodeChoice {
-                    text: arc!("...esperar fuera."),
+                    text: arc!("Cleodolinda decidió esperar fuera."),
                     illustration: None,
                     additional_text: arc!(|context| if context.princesa_guerrera { "Cleodolinda, sabiendo que Sant Jordi no podría acabar con un dragón él solo, se quedó fuera esperando a que saliera despavorido en busca de ayuda." } else if context.fan_dragones { "Siendo consciente del peligro que tenía exponerse a un dragón real, Cleodolinda perefirió esperar a que el caballero cumpliera su cometido. Ya podría examinarlo bien después." } else if context.princesa_rechazada { "Cleodolinda esperó fuera de la cueva a que Sant Jordi finalizara su deber, si es que era tan machote como decía ser..." } else { unreachable!("Some flag should have been set.") }),
                     state_change: arc!(|context| context.salir_cueva = true),

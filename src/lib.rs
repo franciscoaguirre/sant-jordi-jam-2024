@@ -1,7 +1,6 @@
 #![allow(clippy::type_complexity)]
 
 mod actions;
-mod audio;
 mod book;
 mod book_content;
 mod graph;
@@ -9,13 +8,13 @@ mod loading;
 mod menu;
 
 use crate::actions::ActionsPlugin;
-use crate::audio::InternalAudioPlugin;
 use crate::book::BookPlugin;
 use crate::loading::LoadingPlugin;
 use crate::menu::MenuPlugin;
 
 use bevy::app::App;
 use bevy::prelude::*;
+use bevy_kira_audio::prelude::*;
 
 // This example game uses States to separate logic
 // See https://bevy-cheatbook.github.io/programming/states.html
@@ -39,8 +38,8 @@ impl Plugin for GamePlugin {
             LoadingPlugin,
             MenuPlugin,
             ActionsPlugin,
-            InternalAudioPlugin,
             BookPlugin,
+            AudioPlugin,
         ));
     }
 }

@@ -1,11 +1,12 @@
 #![allow(clippy::too_many_arguments)]
 
 use bevy::prelude::*;
+use bevy_kira_audio::prelude::*;
 
 use crate::{
     book_content::{self, BookGraph},
     graph::Node,
-    loading::{AnimationAssets, FontAssets, Illustrations, UiTextures},
+    loading::{AnimationAssets, AudioAssets, FontAssets, Illustrations, UiTextures},
     menu::{FirstPage, SecondPage},
     GameState,
 };
@@ -46,7 +47,7 @@ impl Plugin for BookPlugin {
 pub struct OptionChosen {
     index: usize,
     text: String,
-    image: Handle<Image>,
+    image: Option<Handle<Image>>,
 }
 
 #[derive(Event, Default)]
@@ -123,17 +124,19 @@ fn draw_chosen_option(
                 ),
                 Erasable,
             ));
-            parent.spawn((
-                ImageBundle {
-                    image: image.clone().into(),
-                    style: Style {
-                        height: Val::Percent(50.),
+            if let Some(image) = image {
+                parent.spawn((
+                    ImageBundle {
+                        image: image.clone().into(),
+                        style: Style {
+                            height: Val::Percent(50.),
+                            ..default()
+                        },
                         ..default()
                     },
-                    ..default()
-                },
-                Erasable,
-            ));
+                    Erasable,
+                ));
+            }
         });
         graph.choose(*index);
     }
@@ -158,10 +161,13 @@ fn flip_page(
     animations: Res<AnimationAssets>,
     mut event_writer: EventWriter<Transition>,
     mut erase_everything: EventWriter<EraseEverything>,
+    audio: Res<Audio>,
+    audio_assets: Res<AudioAssets>,
 ) {
     if matches!(lifecycle.0, Lifecycle::Chosen | Lifecycle::SimpleNode)
         && keyboard_input.just_pressed(KeyCode::Space)
     {
+        audio.play(audio_assets.page_flip.clone());
         for mut player in players.iter_mut() {
             player.start(animations.page_flip.clone());
             event_writer.send_default();
@@ -236,22 +242,15 @@ fn show_current_node_and_transition(
 fn interact_with_options(
     lifecycle: Res<LifecycleManager>,
     mut interaction_query: Query<
-        (
-            &Interaction,
-            &ChoicesOption,
-            &mut BackgroundColor,
-            &Children,
-        ),
-        (Changed<Interaction>, With<ChoicesOption>),
+        (&Interaction, &ChoicesOption, &mut BackgroundColor),
+        Changed<Interaction>,
     >,
-    text_query: Query<&Text>,
-    image_query: Query<&UiImage>,
     mut option_chosen: EventWriter<OptionChosen>,
     mut transition: EventWriter<Transition>,
     mut erase_everything: EventWriter<EraseEverything>,
 ) {
     if let Lifecycle::Choosing = lifecycle.0 {
-        for (interaction, choice, mut background_color, children) in interaction_query.iter_mut() {
+        for (interaction, choice, mut background_color) in interaction_query.iter_mut() {
             match *interaction {
                 Interaction::Hovered => {
                     *background_color = BUTTON_HOVER_COLOR.into();
@@ -261,12 +260,10 @@ fn interact_with_options(
                 }
                 Interaction::Pressed => {
                     *background_color = BUTTON_PRESSED_COLOR.into();
-                    let image = image_query.get(children[0]).unwrap();
-                    let text = text_query.get(children[1]).unwrap();
                     option_chosen.send(OptionChosen {
-                        index: choice.0,
-                        text: text.sections[0].value.clone(),
-                        image: image.texture.clone(),
+                        index: choice.index,
+                        text: choice.text.clone(),
+                        image: choice.image.clone(),
                     });
                     erase_everything.send_default();
                     transition.send_default();
@@ -277,7 +274,11 @@ fn interact_with_options(
 }
 
 #[derive(Component)]
-pub struct ChoicesOption(pub usize);
+pub struct ChoicesOption {
+    pub index: usize,
+    pub image: Option<Handle<Image>>,
+    pub text: String,
+}
 
 #[derive(Component)]
 pub struct MainText;
@@ -315,6 +316,7 @@ fn show_current_node(
             commands.entity(second_page).with_children(|parent| {
                 let number_of_choices = choices.len();
                 for (index, choice) in choices.iter().enumerate() {
+                    let text = (choice.text)(&graph.context).to_string();
                     parent
                         .spawn((
                             ButtonBundle {
@@ -331,7 +333,11 @@ fn show_current_node(
                                 border_color: Color::BLACK.into(),
                                 ..default()
                             },
-                            ChoicesOption(index),
+                            ChoicesOption {
+                                index,
+                                image: choice.illustration.clone(),
+                                text: text.clone(),
+                            },
                             Erasable,
                         ))
                         .with_children(|parent| {
@@ -348,7 +354,7 @@ fn show_current_node(
                             parent.spawn(TextBundle {
                                 text: Text {
                                     sections: vec![TextSection {
-                                        value: (choice.text)(&graph.context).to_string(),
+                                        value: text,
                                         style: TextStyle {
                                             font: fonts.normal.clone(),
                                             font_size: if number_of_choices == 3 {

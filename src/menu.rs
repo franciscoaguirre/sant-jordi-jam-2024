@@ -1,7 +1,8 @@
 use crate::book::{BUTTON_HOVER_COLOR, BUTTON_NORMAL_COLOR};
-use crate::loading::{FontAssets, ModelAssets, UiTextures};
+use crate::loading::{AudioAssets, FontAssets, ModelAssets, UiTextures};
 use crate::GameState;
 use bevy::prelude::*;
+use bevy_kira_audio::prelude::*;
 
 pub const MENU_BUTTON_RED: Color = Color::rgba(0.678, 0.047, 0.109, 1.);
 
@@ -13,11 +14,19 @@ impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             OnEnter(GameState::Menu),
-            (setup_book, setup_menu.after(setup_book)),
+            (
+                start_background_music,
+                setup_book,
+                setup_menu.after(setup_book),
+            ),
         )
         .add_systems(Update, click_play_button.run_if(in_state(GameState::Menu)))
         .add_systems(OnExit(GameState::Menu), cleanup_menu);
     }
+}
+
+fn start_background_music(audio_assets: Res<AudioAssets>, audio: Res<Audio>) {
+    audio.play(audio_assets.background_music.clone()).looped();
 }
 
 #[derive(Component)]
