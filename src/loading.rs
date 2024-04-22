@@ -81,6 +81,22 @@ pub struct TextureAssets {
     pub sant_jordi_fighting_alone: Handle<Image>,
     #[asset(path = "textures/sant-jordi-with-dragon-head.png")]
     pub sant_jordi_with_dragon_head: Handle<Image>,
+    #[asset(path = "textures/sensual-dragon-coming-out-of-cave.png")]
+    pub sensual_dragon_coming_out_of_cave: Handle<Image>,
+    #[asset(path = "textures/jordi-dragon-accepts-princess.png")]
+    pub jordi_dragon_accepts_princess: Handle<Image>,
+    #[asset(path = "textures/princess-dragon.png")]
+    pub princess_dragon: Handle<Image>,
+    #[asset(path = "textures/dragon-x-jordi-dragon.png")]
+    pub dragon_x_jordi_dragon: Handle<Image>,
+    #[asset(path = "textures/jordi-dragon-rejects-princess.png")]
+    pub jordi_dragon_rejects_princess: Handle<Image>,
+    #[asset(path = "textures/dragon-chases-jordi-dragon.png")]
+    pub dragon_chases_jordi_dragon: Handle<Image>,
+    #[asset(path = "textures/princess-thinking.png")]
+    pub princess_thinking: Handle<Image>,
+    #[asset(path = "textures/dragon-x-sant-jordi.png")]
+    pub dragon_x_sant_jordi: Handle<Image>,
 }
 
 #[derive(AssetCollection, Resource)]

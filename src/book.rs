@@ -221,13 +221,7 @@ fn show_current_node_and_transition(
     if let Lifecycle::ShowNode = lifecycle.0 {
         let first_page = first_page.single();
         let second_page = second_page.single();
-        let is_simple = show_current_node(
-            graph.get_current_node(),
-            first_page,
-            second_page,
-            &mut commands,
-            &fonts,
-        );
+        let is_simple = show_current_node(&graph, first_page, second_page, &mut commands, &fonts);
         if is_simple {
             lifecycle.0 = Lifecycle::SimpleNode;
             advance_simple_node.send_default();
@@ -291,18 +285,19 @@ pub struct Erasable;
 
 /// Returns whether or not the node is simple.
 fn show_current_node(
-    node: &BookNode,
+    graph: &BookGraph,
     first_page: Entity,
     second_page: Entity,
     commands: &mut Commands,
     fonts: &Res<FontAssets>,
 ) -> bool {
+    let node = graph.get_current_node();
     match node {
         Node::Fork { content, choices } => {
             commands.entity(first_page).with_children(|parent| {
                 parent.spawn((
                     TextBundle::from_section(
-                        *content,
+                        (content)(&graph.context),
                         TextStyle {
                             font: fonts.normal.clone(),
                             font_size: 50.,
@@ -345,7 +340,7 @@ fn show_current_node(
                             parent.spawn(TextBundle {
                                 text: Text {
                                     sections: vec![TextSection {
-                                        value: choice.text.to_string(),
+                                        value: (choice.text)(&graph.context).to_string(),
                                         style: TextStyle {
                                             font: fonts.normal.clone(),
                                             font_size: if number_of_choices == 3 {
@@ -370,7 +365,7 @@ fn show_current_node(
             commands.entity(first_page).with_children(|parent| {
                 parent.spawn((
                     TextBundle::from_section(
-                        *content,
+                        (content)(&graph.context),
                         TextStyle {
                             font: fonts.normal.clone(),
                             font_size: 50.,

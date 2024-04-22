@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 use std::fmt;
+use std::sync::Arc;
 
 use bevy::prelude::*;
 
@@ -76,6 +77,16 @@ pub enum Node<Content, Simple, Choice> {
         content: Content,
         choices: Vec<Choice>,
     },
+}
+
+#[macro_export]
+macro_rules! arc {
+    (|$closure_var:ident| $inner:expr) => {
+        Arc::new(|$closure_var| $inner)
+    };
+    ($inner:expr) => {
+        Arc::new(|_| $inner)
+    };
 }
 
 pub trait ChoiceTrait<Context> {
@@ -168,7 +179,7 @@ mod tests {
             self.next
         }
 
-        fn change_state(&mut self, context: &mut TestContext) {}
+        fn change_state(&self, context: &mut TestContext) {}
     }
 
     #[derive(Debug, Default)]
