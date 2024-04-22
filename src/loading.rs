@@ -16,6 +16,7 @@ impl Plugin for LoadingPlugin {
                 .load_collection::<FontAssets>()
                 .load_collection::<ModelAssets>()
                 .load_collection::<AnimationAssets>()
+                .load_collection::<MaterialAssets>()
                 .load_collection::<AudioAssets>()
                 .load_collection::<Illustrations>()
                 .load_collection::<UiTextures>(),
@@ -66,6 +67,8 @@ pub struct UiTextures {
     pub cat: Handle<Image>,
     #[asset(path = "textures/snail-boy.png")]
     pub snail_boy: Handle<Image>,
+    #[asset(path = "textures/paper.png")]
+    pub paper: Handle<Image>,
 }
 
 // TODO: Not using IMG_25.png
@@ -129,6 +132,16 @@ pub struct Illustrations {
 pub struct ModelAssets {
     #[asset(path = "models/book.gltf#Scene0")]
     pub book: Handle<Scene>,
+}
+
+#[derive(AssetCollection, Resource)]
+pub struct MaterialAssets {
+    #[asset(path = "models/book.gltf#Material1")]
+    pub left_page: Handle<StandardMaterial>,
+    #[asset(path = "models/book.gltf#Material3")]
+    pub right_page: Handle<StandardMaterial>,
+    #[asset(path = "models/book.gltf#Material5")]
+    pub turning_page: Handle<StandardMaterial>,
 }
 
 #[derive(AssetCollection, Resource)]
