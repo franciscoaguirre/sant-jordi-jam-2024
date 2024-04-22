@@ -14,12 +14,7 @@ pub const BUTTON_HOVER_COLOR: Color = Color::rgba(1., 0., 0., 0.5);
 pub const BUTTON_NORMAL_COLOR: Color = Color::NONE;
 pub const BUTTON_PRESSED_COLOR: Color = Color::rgba(0.7, 0., 0., 0.7);
 
-pub const FIRST_LETTER_COLOR: Color = Color::rgba(
-    0.23529411764705882,
-    0.0392156862745098,
-    0.33725490196078434,
-    1.,
-);
+pub const FIRST_LETTER_COLOR: Color = Color::rgba(0.235, 0.039, 0.337, 1.);
 
 pub struct BookPlugin;
 impl Plugin for BookPlugin {
@@ -304,7 +299,7 @@ fn show_current_node(
         Node::Fork { content, choices } => {
             let content = (content)(&graph.context);
             commands.entity(first_page).with_children(|parent| {
-                parent.spawn((get_formatted_text(content, &fonts), Erasable));
+                parent.spawn((get_formatted_text(content, fonts), Erasable));
                 parent.spawn((
                     ImageBundle {
                         image: textures.fancy_underline.clone().into(),
@@ -377,7 +372,7 @@ fn show_current_node(
         Node::Simple { content, extra, .. } => {
             commands.entity(first_page).with_children(|parent| {
                 parent.spawn((
-                    get_formatted_text((content)(&graph.context), &fonts),
+                    get_formatted_text((content)(&graph.context), fonts),
                     Erasable,
                 ));
             });
@@ -481,7 +476,7 @@ fn show_current_node(
 }
 
 fn setup_graph(mut commands: Commands, illustrations: Res<Illustrations>) {
-    let mut graph = book_content::get_book_content(&illustrations);
+    let graph = book_content::get_book_content(&illustrations);
     // TODO: For testing, remove.
     // graph.set_current_node(1);
     commands.insert_resource(graph);

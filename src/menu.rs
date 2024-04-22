@@ -3,12 +3,7 @@ use crate::loading::{FontAssets, ModelAssets, UiTextures};
 use crate::GameState;
 use bevy::prelude::*;
 
-pub const MENU_BUTTON_RED: Color = Color::rgba(
-    0.6784313725490196,
-    0.047058823529411764,
-    0.10588235294117647,
-    1.,
-);
+pub const MENU_BUTTON_RED: Color = Color::rgba(0.678, 0.047, 0.109, 1.);
 
 pub struct MenuPlugin;
 

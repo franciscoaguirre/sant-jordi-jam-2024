@@ -22,6 +22,7 @@ fn main() {
                 canvas: Some("#bevy".to_owned()),
                 // Tells wasm not to override default event handling, like F5 and Ctrl+R
                 prevent_default_event_handling: false,
+                mode: bevy::window::WindowMode::BorderlessFullscreen,
                 ..default()
             }),
             ..default()
