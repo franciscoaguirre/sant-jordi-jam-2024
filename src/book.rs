@@ -1,12 +1,20 @@
 #![allow(clippy::too_many_arguments)]
 
-use bevy::prelude::*;
+use bevy::{
+    prelude::*,
+    render::{
+        camera::RenderTarget,
+        render_resource::{
+            Extent3d, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages,
+        },
+    },
+};
 
 use crate::{
     book_content::{self, BookGraph},
     graph::Node,
     loading::{AnimationAssets, FontAssets, Illustrations, UiTextures},
-    menu::{FirstPage, SecondPage},
+    menu::{FirstPage, SecondPage, TargetCameras},
     GameState,
 };
 
@@ -29,6 +37,7 @@ impl Plugin for BookPlugin {
             .add_event::<EraseEverything>()
             .add_event::<PageFlipEnded>()
             .add_event::<OptionChosen>()
+            .insert_resource(SelectedOption { index: 0 })
             .add_systems(OnEnter(GameState::Playing), (setup_graph, setup_lifecycle))
             .add_systems(
                 Update,
@@ -41,6 +50,7 @@ impl Plugin for BookPlugin {
                     advance_simple_node_listener,
                     flip_page,
                     flip_page_listener,
+                    highlight_selected_option,
                 )
                     .run_if(in_state(GameState::Playing)),
             );
@@ -97,11 +107,12 @@ fn setup_lifecycle(mut commands: Commands) {
 
 fn draw_chosen_option(
     mut commands: Commands,
-    first_page: Query<Entity, With<FirstPage>>,
-    second_page: Query<Entity, With<SecondPage>>,
     fonts: Res<FontAssets>,
     mut events: EventReader<OptionChosen>,
     mut graph: ResMut<BookGraph>,
+    target_cameras: Res<TargetCameras>,
+    mut images: ResMut<Assets<Image>>,
+    textures: Res<UiTextures>,
 ) {
     for event in events.read() {
         let current_node = graph.get_current_node();
@@ -111,35 +122,138 @@ fn draw_chosen_option(
         // TODO: I could get everything from `current_node`.
         let OptionChosen { index, text, image } = event;
         let chosen_option = &choices[*index];
-        let mut first_page = commands.entity(first_page.single());
-        first_page.with_children(|parent| {
-            parent.spawn((get_formatted_text(text, &fonts), Erasable));
-        });
-        let mut second_page = commands.entity(second_page.single());
-        second_page.with_children(|parent| {
-            parent.spawn((
-                TextBundle::from_section(
-                    (chosen_option.additional_text)(&graph.context),
-                    TextStyle {
-                        font: fonts.normal.clone(),
-                        font_size: 30.,
-                        color: Color::BLACK,
+        commands
+            .spawn((
+                NodeBundle {
+                    style: Style {
+                        width: Val::Px(700.),
+                        height: Val::Percent(100.),
+                        padding: UiRect::all(Val::Px(20.)),
+                        ..default()
                     },
-                ),
-                Erasable,
-            ));
-            parent.spawn((
-                ImageBundle {
+                    ..default()
+                },
+                TargetCamera(target_cameras.first_page),
+            ))
+            .with_children(|parent| {
+                parent.spawn(get_formatted_text(text, &fonts).with_style(Style {
+                    width: Val::Px(300.),
+                    ..default()
+                }));
+            });
+        let size = Extent3d {
+            width: 1024,
+            height: 1024,
+            ..default()
+        };
+        let mut temp_image = Image {
+            texture_descriptor: TextureDescriptor {
+                label: None,
+                size,
+                dimension: TextureDimension::D2,
+                format: TextureFormat::Bgra8UnormSrgb,
+                mip_level_count: 1,
+                sample_count: 1,
+                usage: TextureUsages::TEXTURE_BINDING
+                    | TextureUsages::COPY_DST
+                    | TextureUsages::RENDER_ATTACHMENT,
+                view_formats: &[],
+            },
+            ..default()
+        };
+        temp_image.resize(size);
+        let temp_image_handle = images.add(temp_image);
+        let temp_image_camera = commands
+            .spawn(Camera2dBundle {
+                camera: Camera {
+                    order: -1,
+                    target: RenderTarget::Image(temp_image_handle.clone()),
+                    ..default()
+                },
+                ..default()
+            })
+            .id();
+        commands
+            .spawn((
+                NodeBundle {
+                    style: Style {
+                        width: Val::Percent(100.),
+                        height: Val::Percent(100.),
+                        display: Display::Flex,
+                        padding: UiRect {
+                            left: Val::Px(150.),
+                            top: Val::Px(20.),
+                            right: Val::Px(20.),
+                            bottom: Val::Px(20.),
+                        },
+                        flex_direction: FlexDirection::Column,
+                        justify_content: JustifyContent::SpaceAround,
+                        align_items: AlignItems::Center,
+                        position_type: PositionType::Relative,
+                        ..default()
+                    },
+                    ..default()
+                },
+                TargetCamera(temp_image_camera),
+            ))
+            .with_children(|parent| {
+                parent.spawn(ImageBundle {
+                    image: textures.paper.clone().into(),
+                    style: Style {
+                        position_type: PositionType::Absolute,
+                        top: Val::Px(0.),
+                        left: Val::Px(0.),
+                        width: Val::Percent(100.),
+                        height: Val::Percent(100.),
+                        ..default()
+                    },
+                    ..default()
+                });
+                parent.spawn(
+                    TextBundle::from_section(
+                        (chosen_option.additional_text)(&graph.context),
+                        TextStyle {
+                            font: fonts.normal.clone(),
+                            font_size: 30.,
+                            color: Color::BLACK,
+                        },
+                    )
+                    .with_style(Style {
+                        width: Val::Percent(50.),
+                        ..default()
+                    }),
+                );
+                parent.spawn(ImageBundle {
                     image: image.clone().into(),
                     style: Style {
                         height: Val::Percent(50.),
                         ..default()
                     },
                     ..default()
+                });
+            });
+        commands
+            .spawn((
+                NodeBundle {
+                    style: Style {
+                        width: Val::Percent(100.),
+                        height: Val::Percent(100.),
+                        ..default()
+                    },
+                    ..default()
                 },
-                Erasable,
-            ));
-        });
+                TargetCamera(target_cameras.turning_page),
+            ))
+            .with_children(|parent| {
+                parent.spawn(ImageBundle {
+                    image: UiImage {
+                        texture: temp_image_handle.clone(),
+                        flip_x: true,
+                        ..default()
+                    },
+                    ..default()
+                });
+            });
         graph.choose(*index);
     }
 }
@@ -217,6 +331,8 @@ fn show_current_node_and_transition(
     mut commands: Commands,
     fonts: Res<FontAssets>,
     textures: Res<UiTextures>,
+    target_cameras: Res<TargetCameras>,
+    mut images: ResMut<Assets<Image>>,
 ) {
     if let Lifecycle::ShowNode = lifecycle.0 {
         let first_page = first_page.single();
@@ -228,6 +344,8 @@ fn show_current_node_and_transition(
             &mut commands,
             &fonts,
             &textures,
+            &target_cameras,
+            &mut images,
         );
         if is_simple {
             lifecycle.0 = Lifecycle::SimpleNode;
@@ -238,40 +356,34 @@ fn show_current_node_and_transition(
     }
 }
 
+#[derive(Resource)]
+pub struct SelectedOption {
+    pub index: usize,
+}
+
 fn interact_with_options(
     lifecycle: Res<LifecycleManager>,
-    mut interaction_query: Query<
-        (
-            &Interaction,
-            &ChoicesOption,
-            &mut BackgroundColor,
-            &Children,
-        ),
-        (Changed<Interaction>, With<ChoicesOption>),
-    >,
-    text_query: Query<&Text>,
-    image_query: Query<&UiImage>,
+    choices_query: Query<&ChoicesOption>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut selected_option: ResMut<SelectedOption>,
     mut option_chosen: EventWriter<OptionChosen>,
     mut transition: EventWriter<Transition>,
     mut erase_everything: EventWriter<EraseEverything>,
 ) {
     if let Lifecycle::Choosing = lifecycle.0 {
-        for (interaction, choice, mut background_color, children) in interaction_query.iter_mut() {
-            match *interaction {
-                Interaction::Hovered => {
-                    *background_color = BUTTON_HOVER_COLOR.into();
-                }
-                Interaction::None => {
-                    *background_color = BUTTON_NORMAL_COLOR.into();
-                }
-                Interaction::Pressed => {
-                    *background_color = BUTTON_PRESSED_COLOR.into();
-                    let image = image_query.get(children[0]).unwrap();
-                    let text = text_query.get(children[1]).unwrap();
+        if keyboard_input.just_pressed(KeyCode::ArrowDown) {
+            selected_option.index += 1;
+        } else if keyboard_input.just_pressed(KeyCode::ArrowUp) {
+            selected_option.index -= 1;
+        }
+
+        if keyboard_input.just_pressed(KeyCode::Space) {
+            for choice in choices_query.iter() {
+                if selected_option.index == choice.index {
                     option_chosen.send(OptionChosen {
-                        index: choice.0,
-                        text: text.sections[0].value.clone(),
-                        image: image.texture.clone(),
+                        index: selected_option.index,
+                        image: choice.image.clone().expect("Handle no textures"),
+                        text: choice.text.clone(),
                     });
                     erase_everything.send_default();
                     transition.send_default();
@@ -281,8 +393,25 @@ fn interact_with_options(
     }
 }
 
+fn highlight_selected_option(
+    selected_option: Res<SelectedOption>,
+    mut choices_query: Query<(&ChoicesOption, &mut BackgroundColor)>,
+) {
+    for (choice, mut background_color) in choices_query.iter_mut() {
+        if selected_option.index == choice.index {
+            *background_color = Color::RED.into();
+        } else {
+            *background_color = Color::NONE.into();
+        }
+    }
+}
+
 #[derive(Component)]
-pub struct ChoicesOption(pub usize);
+pub struct ChoicesOption {
+    pub index: usize,
+    pub image: Option<Handle<Image>>,
+    pub text: String,
+}
 
 #[derive(Component)]
 pub struct MainText;
@@ -298,80 +427,221 @@ fn show_current_node(
     commands: &mut Commands,
     fonts: &Res<FontAssets>,
     textures: &Res<UiTextures>,
+    target_cameras: &Res<TargetCameras>,
+    images: &mut ResMut<Assets<Image>>,
 ) -> bool {
     let node = graph.get_current_node();
     match node {
         Node::Fork { content, choices } => {
             let content = (content)(&graph.context);
-            commands.entity(first_page).with_children(|parent| {
-                parent.spawn((get_formatted_text(content, &fonts), Erasable));
-                parent.spawn((
-                    ImageBundle {
-                        image: textures.fancy_underline.clone().into(),
+            commands
+                .spawn((
+                    NodeBundle {
                         style: Style {
-                            width: Val::Percent(100.),
+                            width: Val::Px(700.),
+                            height: Val::Percent(100.),
+                            display: Display::Flex,
+                            padding: UiRect::all(Val::Px(20.)),
+                            flex_direction: FlexDirection::Column,
+                            position_type: PositionType::Relative,
                             ..default()
                         },
                         ..default()
                     },
-                    Erasable,
-                ));
-            });
-            commands.entity(second_page).with_children(|parent| {
-                let number_of_choices = choices.len();
-                for (index, choice) in choices.iter().enumerate() {
-                    parent
-                        .spawn((
-                            ButtonBundle {
-                                background_color: Color::NONE.into(),
-                                style: Style {
-                                    width: Val::Percent(100.),
-                                    display: Display::Flex,
-                                    flex_direction: FlexDirection::Row,
-                                    align_items: AlignItems::Center,
-                                    margin: UiRect::top(Val::Px(if index == 0 { 0. } else { 10. })),
-                                    border: UiRect::all(Val::Px(2.0)),
-                                    ..default()
-                                },
-                                border_color: Color::BLACK.into(),
+                    TargetCamera(target_cameras.first_page),
+                ))
+                .with_children(|parent| {
+                    parent.spawn(ImageBundle {
+                        image: textures.paper.clone().into(),
+                        style: Style {
+                            position_type: PositionType::Absolute,
+                            top: Val::Px(0.),
+                            left: Val::Px(0.),
+                            width: Val::Percent(100.),
+                            height: Val::Percent(100.),
+                            ..default()
+                        },
+                        ..default()
+                    });
+                    parent.spawn((
+                        get_formatted_text(content, &fonts).with_style(Style {
+                            width: Val::Px(300.),
+                            ..default()
+                        }),
+                        Erasable,
+                    ));
+                    parent.spawn((
+                        ImageBundle {
+                            image: textures.fancy_underline.clone().into(),
+                            style: Style {
+                                width: Val::Percent(100.),
                                 ..default()
                             },
-                            ChoicesOption(index),
-                            Erasable,
-                        ))
-                        .with_children(|parent| {
-                            if let Some(ref illustration) = choice.illustration {
-                                parent.spawn(ImageBundle {
-                                    image: illustration.clone().into(),
+                            ..default()
+                        },
+                        Erasable,
+                    ));
+                });
+            let size = Extent3d {
+                width: 1024,
+                height: 1024,
+                ..default()
+            };
+            let mut temp_image = Image {
+                texture_descriptor: TextureDescriptor {
+                    label: None,
+                    size,
+                    dimension: TextureDimension::D2,
+                    format: TextureFormat::Bgra8UnormSrgb,
+                    mip_level_count: 1,
+                    sample_count: 1,
+                    usage: TextureUsages::TEXTURE_BINDING
+                        | TextureUsages::COPY_DST
+                        | TextureUsages::RENDER_ATTACHMENT,
+                    view_formats: &[],
+                },
+                ..default()
+            };
+            temp_image.resize(size);
+            let temp_image_handle = images.add(temp_image);
+            let temp_image_camera = commands
+                .spawn(Camera2dBundle {
+                    camera: Camera {
+                        order: -1,
+                        target: RenderTarget::Image(temp_image_handle.clone()),
+                        ..default()
+                    },
+                    ..default()
+                })
+                .id();
+            commands
+                .spawn((
+                    NodeBundle {
+                        style: Style {
+                            width: Val::Percent(100.),
+                            height: Val::Percent(100.),
+                            display: Display::Flex,
+                            padding: UiRect {
+                                left: Val::Px(150.),
+                                top: Val::Px(20.),
+                                right: Val::Px(20.),
+                                bottom: Val::Px(20.),
+                            },
+                            flex_direction: FlexDirection::Column,
+                            justify_content: JustifyContent::Center,
+                            align_items: AlignItems::Center,
+                            position_type: PositionType::Relative,
+                            ..default()
+                        },
+                        background_color: Color::PINK.into(),
+                        ..default()
+                    },
+                    TargetCamera(temp_image_camera),
+                ))
+                .with_children(|parent| {
+                    parent.spawn(ImageBundle {
+                        image: textures.paper.clone().into(),
+                        style: Style {
+                            position_type: PositionType::Absolute,
+                            top: Val::Px(0.),
+                            left: Val::Px(0.),
+                            width: Val::Percent(100.),
+                            height: Val::Percent(100.),
+                            ..default()
+                        },
+                        ..default()
+                    });
+                    let number_of_choices = choices.len();
+                    for (index, choice) in choices.iter().enumerate() {
+                        let text = (choice.text)(&graph.context).to_string();
+                        parent
+                            .spawn((
+                                NodeBundle {
+                                    background_color: Color::NONE.into(),
                                     style: Style {
-                                        height: Val::Px(150.),
+                                        width: Val::Percent(100.),
+                                        height: Val::Percent(35.),
+                                        display: Display::Flex,
+                                        flex_direction: FlexDirection::Row,
+                                        align_items: AlignItems::Center,
+                                        margin: UiRect::top(Val::Px(if index == 0 {
+                                            0.
+                                        } else {
+                                            50.
+                                        })),
+                                        border: UiRect::all(Val::Px(2.0)),
+                                        ..default()
+                                    },
+                                    border_color: Color::BLACK.into(),
+                                    ..default()
+                                },
+                                ChoicesOption {
+                                    index,
+                                    image: choice.illustration.clone(),
+                                    text: text.clone(),
+                                },
+                                Erasable,
+                            ))
+                            .with_children(|parent| {
+                                if let Some(ref illustration) = choice.illustration {
+                                    parent.spawn(ImageBundle {
+                                        image: illustration.clone().into(),
+                                        style: Style {
+                                            height: Val::Px(250.),
+                                            width: Val::Px(150.),
+                                            ..default()
+                                        },
+                                        ..default()
+                                    });
+                                }
+                                parent.spawn(TextBundle {
+                                    text: Text {
+                                        sections: vec![TextSection {
+                                            value: text,
+                                            style: TextStyle {
+                                                font: fonts.normal.clone(),
+                                                font_size: if number_of_choices == 3 {
+                                                    20.
+                                                } else {
+                                                    25.
+                                                },
+                                                color: Color::BLACK,
+                                            },
+                                        }],
+                                        ..default()
+                                    },
+                                    style: Style {
+                                        width: Val::Px(350.),
+                                        margin: UiRect::top(Val::Px(50.)),
                                         ..default()
                                     },
                                     ..default()
                                 });
-                            }
-                            parent.spawn(TextBundle {
-                                text: Text {
-                                    sections: vec![TextSection {
-                                        value: (choice.text)(&graph.context).to_string(),
-                                        style: TextStyle {
-                                            font: fonts.normal.clone(),
-                                            font_size: if number_of_choices == 3 {
-                                                25.
-                                            } else {
-                                                30.
-                                            },
-                                            color: Color::BLACK,
-                                        },
-                                    }],
-                                    ..default()
-                                },
-                                style: Style { ..default() },
-                                ..default()
                             });
-                        });
-                }
-            });
+                    }
+                });
+            commands
+                .spawn((
+                    NodeBundle {
+                        style: Style {
+                            width: Val::Percent(100.),
+                            height: Val::Percent(100.),
+                            ..default()
+                        },
+                        ..default()
+                    },
+                    TargetCamera(target_cameras.turning_page),
+                ))
+                .with_children(|parent| {
+                    parent.spawn(ImageBundle {
+                        image: UiImage {
+                            texture: temp_image_handle.clone(),
+                            flip_x: true,
+                            ..default()
+                        },
+                        ..default()
+                    });
+                });
             false
         }
         Node::Simple { content, extra, .. } => {
