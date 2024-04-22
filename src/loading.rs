@@ -17,7 +17,8 @@ impl Plugin for LoadingPlugin {
                 .load_collection::<ModelAssets>()
                 .load_collection::<AnimationAssets>()
                 .load_collection::<AudioAssets>()
-                .load_collection::<TextureAssets>(),
+                .load_collection::<Illustrations>()
+                .load_collection::<UiTextures>(),
         );
     }
 }
@@ -27,10 +28,10 @@ impl Plugin for LoadingPlugin {
 
 #[derive(AssetCollection, Resource)]
 pub struct FontAssets {
-    #[asset(path = "fonts/Enchanted Land.otf")]
+    #[asset(path = "fonts/Seagram tfb.ttf")]
     pub normal: Handle<Font>,
     #[asset(path = "fonts/GoudyIni.ttf")]
-    pub initials: Handle<Font>,
+    pub first_letter: Handle<Font>,
 }
 
 #[derive(AssetCollection, Resource)]
@@ -40,62 +41,75 @@ pub struct AudioAssets {
 }
 
 #[derive(AssetCollection, Resource)]
-pub struct TextureAssets {
+pub struct UiTextures {
     #[asset(path = "textures/bevy.png")]
     pub bevy: Handle<Image>,
     #[asset(path = "textures/github.png")]
     pub github: Handle<Image>,
-    #[asset(path = "textures/normal-dragon.png")]
+    #[asset(path = "textures/play-button.png")]
+    pub play_button: Handle<Image>,
+    #[asset(path = "textures/fancy-underline.png")]
+    pub fancy_underline: Handle<Image>,
+    #[asset(path = "textures/rabbit-troubadour.png")]
+    pub rabbit_troubadour: Handle<Image>,
+    #[asset(path = "textures/roses-frame.png")]
+    pub roses_frame: Handle<Image>,
+}
+
+// TODO: Not using IMG_25.png
+#[derive(AssetCollection, Resource)]
+pub struct Illustrations {
+    #[asset(path = "illustrations/normal-dragon.png")]
     pub normal_dragon: Handle<Image>,
-    #[asset(path = "textures/sant-jordi-disguised-as-dragon.png")]
+    #[asset(path = "illustrations/sant-jordi-disguised-as-dragon.png")]
     pub sant_jordi_disguised_as_dragon: Handle<Image>,
-    #[asset(path = "textures/princess-go-kill-dragon.png")]
+    #[asset(path = "illustrations/princess-go-kill-dragon.png")]
     pub princess_go_kill_dragon: Handle<Image>,
-    #[asset(path = "textures/princess-excited-to-be-picked.png")]
+    #[asset(path = "illustrations/princess-excited-to-be-picked.png")]
     pub princess_excited_to_be_picked: Handle<Image>,
-    #[asset(path = "textures/dragon-with-cow.png")]
+    #[asset(path = "illustrations/dragon-with-cow.png")]
     pub dragon_with_cow: Handle<Image>,
-    #[asset(path = "textures/jordi-dragon-with-cow.png")]
+    #[asset(path = "illustrations/jordi-dragon-with-cow.png")]
     pub jordi_dragon_with_cow: Handle<Image>,
-    #[asset(path = "textures/king-picks-princess.png")]
+    #[asset(path = "illustrations/king-picks-princess.png")]
     pub king_picks_princess: Handle<Image>,
-    #[asset(path = "textures/sant-jordi-making-marshmallows.png")]
+    #[asset(path = "illustrations/sant-jordi-making-marshmallows.png")]
     pub sant_jordi_making_marshmallows: Handle<Image>,
-    #[asset(path = "textures/sant-jordi-warrior.png")]
+    #[asset(path = "illustrations/sant-jordi-warrior.png")]
     pub sant_jordi_warrior: Handle<Image>,
-    #[asset(path = "textures/sant-jordi-roses.png")]
+    #[asset(path = "illustrations/sant-jordi-roses.png")]
     pub sant_jordi_roses: Handle<Image>,
-    #[asset(path = "textures/princess-punches-jordi-dragon.png")]
+    #[asset(path = "illustrations/princess-punches-jordi-dragon.png")]
     pub princess_punches_jordi_dragon: Handle<Image>,
-    #[asset(path = "textures/jordi-dragon-confesses.png")]
+    #[asset(path = "illustrations/jordi-dragon-confesses.png")]
     pub jordi_dragon_confesses: Handle<Image>,
-    #[asset(path = "textures/princess-x-dragon.png")]
+    #[asset(path = "illustrations/princess-x-dragon.png")]
     pub princess_x_dragon: Handle<Image>,
-    #[asset(path = "textures/princess-analyzing-jordi-dragon.png")]
+    #[asset(path = "illustrations/princess-analyzing-jordi-dragon.png")]
     pub princess_analyzing_jordi_dragon: Handle<Image>,
-    #[asset(path = "textures/princess-unmasks-jordi-dragon.png")]
+    #[asset(path = "illustrations/princess-unmasks-jordi-dragon.png")]
     pub princess_unmasks_jordi_dragon: Handle<Image>,
-    #[asset(path = "textures/princess-leaves-with-dragon.png")]
+    #[asset(path = "illustrations/princess-leaves-with-dragon.png")]
     pub dragon_returns_from_holidays: Handle<Image>,
-    #[asset(path = "textures/sant-jordi-fighting-alone.png")]
+    #[asset(path = "illustrations/sant-jordi-fighting-alone.png")]
     pub sant_jordi_fighting_alone: Handle<Image>,
-    #[asset(path = "textures/sant-jordi-with-dragon-head.png")]
+    #[asset(path = "illustrations/sant-jordi-with-dragon-head.png")]
     pub sant_jordi_with_dragon_head: Handle<Image>,
-    #[asset(path = "textures/sensual-dragon-coming-out-of-cave.png")]
+    #[asset(path = "illustrations/sensual-dragon-coming-out-of-cave.png")]
     pub sensual_dragon_coming_out_of_cave: Handle<Image>,
-    #[asset(path = "textures/jordi-dragon-accepts-princess.png")]
+    #[asset(path = "illustrations/jordi-dragon-accepts-princess.png")]
     pub jordi_dragon_accepts_princess: Handle<Image>,
-    #[asset(path = "textures/princess-dragon.png")]
+    #[asset(path = "illustrations/princess-dragon.png")]
     pub princess_dragon: Handle<Image>,
-    #[asset(path = "textures/dragon-x-jordi-dragon.png")]
+    #[asset(path = "illustrations/dragon-x-jordi-dragon.png")]
     pub dragon_x_jordi_dragon: Handle<Image>,
-    #[asset(path = "textures/jordi-dragon-rejects-princess.png")]
+    #[asset(path = "illustrations/jordi-dragon-rejects-princess.png")]
     pub jordi_dragon_rejects_princess: Handle<Image>,
-    #[asset(path = "textures/dragon-chases-jordi-dragon.png")]
+    #[asset(path = "illustrations/dragon-chases-jordi-dragon.png")]
     pub dragon_chases_jordi_dragon: Handle<Image>,
-    #[asset(path = "textures/princess-thinking.png")]
+    #[asset(path = "illustrations/princess-thinking.png")]
     pub princess_thinking: Handle<Image>,
-    #[asset(path = "textures/dragon-x-sant-jordi.png")]
+    #[asset(path = "illustrations/dragon-x-sant-jordi.png")]
     pub dragon_x_sant_jordi: Handle<Image>,
 }
 

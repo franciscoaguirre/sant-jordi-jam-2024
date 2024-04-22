@@ -2,7 +2,6 @@
 
 use std::collections::HashMap;
 use std::fmt;
-use std::sync::Arc;
 
 use bevy::prelude::*;
 
@@ -111,6 +110,10 @@ impl<Content, Simple, Choice: ChoiceTrait<Context> + Clone, Context: Default>
 
     pub fn get_current_node(&self) -> &Node<Content, Simple, Choice> {
         self.nodes.get(&self.current_node).unwrap()
+    }
+
+    pub fn set_current_node(&mut self, index: usize) {
+        self.current_node = index;
     }
 
     pub fn reset(&mut self) {

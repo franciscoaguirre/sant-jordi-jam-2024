@@ -3,15 +3,23 @@
 use bevy::prelude::*;
 
 use crate::{
-    book_content::{self, BookGraph, BookNode},
+    book_content::{self, BookGraph},
     graph::Node,
-    loading::{AnimationAssets, FontAssets, ModelAssets, TextureAssets},
+    loading::{AnimationAssets, FontAssets, Illustrations, UiTextures},
+    menu::{FirstPage, SecondPage},
     GameState,
 };
 
-const BUTTON_HOVER_COLOR: Color = Color::rgba(1., 0., 0., 0.5);
-const BUTTON_NORMAL_COLOR: Color = Color::NONE;
-const BUTTON_PRESSED_COLOR: Color = Color::rgba(0.7, 0., 0., 0.7);
+pub const BUTTON_HOVER_COLOR: Color = Color::rgba(1., 0., 0., 0.5);
+pub const BUTTON_NORMAL_COLOR: Color = Color::NONE;
+pub const BUTTON_PRESSED_COLOR: Color = Color::rgba(0.7, 0., 0., 0.7);
+
+pub const FIRST_LETTER_COLOR: Color = Color::rgba(
+    0.23529411764705882,
+    0.0392156862745098,
+    0.33725490196078434,
+    1.,
+);
 
 pub struct BookPlugin;
 impl Plugin for BookPlugin {
@@ -21,10 +29,7 @@ impl Plugin for BookPlugin {
             .add_event::<EraseEverything>()
             .add_event::<PageFlipEnded>()
             .add_event::<OptionChosen>()
-            .add_systems(
-                OnEnter(GameState::Playing),
-                (setup_book, setup_graph, setup_lifecycle),
-            )
+            .add_systems(OnEnter(GameState::Playing), (setup_graph, setup_lifecycle))
             .add_systems(
                 Update,
                 (
@@ -108,9 +113,13 @@ fn draw_chosen_option(
         let chosen_option = &choices[*index];
         let mut first_page = commands.entity(first_page.single());
         first_page.with_children(|parent| {
+            parent.spawn((get_formatted_text(text, &fonts), Erasable));
+        });
+        let mut second_page = commands.entity(second_page.single());
+        second_page.with_children(|parent| {
             parent.spawn((
                 TextBundle::from_section(
-                    text.clone(),
+                    (chosen_option.additional_text)(&graph.context),
                     TextStyle {
                         font: fonts.normal.clone(),
                         font_size: 30.,
@@ -122,22 +131,12 @@ fn draw_chosen_option(
             parent.spawn((
                 ImageBundle {
                     image: image.clone().into(),
+                    style: Style {
+                        height: Val::Percent(50.),
+                        ..default()
+                    },
                     ..default()
                 },
-                Erasable,
-            ));
-        });
-        let mut second_page = commands.entity(second_page.single());
-        second_page.with_children(|parent| {
-            parent.spawn((
-                TextBundle::from_section(
-                    (chosen_option.additional_text)(&graph.context).clone(),
-                    TextStyle {
-                        font: fonts.normal.clone(),
-                        font_size: 30.,
-                        color: Color::BLACK,
-                    },
-                ),
                 Erasable,
             ));
         });
@@ -217,11 +216,19 @@ fn show_current_node_and_transition(
     second_page: Query<Entity, With<SecondPage>>,
     mut commands: Commands,
     fonts: Res<FontAssets>,
+    textures: Res<UiTextures>,
 ) {
     if let Lifecycle::ShowNode = lifecycle.0 {
         let first_page = first_page.single();
         let second_page = second_page.single();
-        let is_simple = show_current_node(&graph, first_page, second_page, &mut commands, &fonts);
+        let is_simple = show_current_node(
+            &graph,
+            first_page,
+            second_page,
+            &mut commands,
+            &fonts,
+            &textures,
+        );
         if is_simple {
             lifecycle.0 = Lifecycle::SimpleNode;
             advance_simple_node.send_default();
@@ -290,20 +297,23 @@ fn show_current_node(
     second_page: Entity,
     commands: &mut Commands,
     fonts: &Res<FontAssets>,
+    textures: &Res<UiTextures>,
 ) -> bool {
     let node = graph.get_current_node();
     match node {
         Node::Fork { content, choices } => {
+            let content = (content)(&graph.context);
             commands.entity(first_page).with_children(|parent| {
+                parent.spawn((get_formatted_text(content, &fonts), Erasable));
                 parent.spawn((
-                    TextBundle::from_section(
-                        (content)(&graph.context),
-                        TextStyle {
-                            font: fonts.normal.clone(),
-                            font_size: 50.,
-                            color: Color::BLACK,
+                    ImageBundle {
+                        image: textures.fancy_underline.clone().into(),
+                        style: Style {
+                            width: Val::Percent(100.),
+                            ..default()
                         },
-                    ),
+                        ..default()
+                    },
                     Erasable,
                 ));
             });
@@ -315,6 +325,7 @@ fn show_current_node(
                             ButtonBundle {
                                 background_color: Color::NONE.into(),
                                 style: Style {
+                                    width: Val::Percent(100.),
                                     display: Display::Flex,
                                     flex_direction: FlexDirection::Row,
                                     align_items: AlignItems::Center,
@@ -329,14 +340,16 @@ fn show_current_node(
                             Erasable,
                         ))
                         .with_children(|parent| {
-                            parent.spawn(ImageBundle {
-                                image: choice.illustration.clone().into(),
-                                style: Style {
-                                    height: Val::Px(150.),
+                            if let Some(ref illustration) = choice.illustration {
+                                parent.spawn(ImageBundle {
+                                    image: illustration.clone().into(),
+                                    style: Style {
+                                        height: Val::Px(150.),
+                                        ..default()
+                                    },
                                     ..default()
-                                },
-                                ..default()
-                            });
+                                });
+                            }
                             parent.spawn(TextBundle {
                                 text: Text {
                                     sections: vec![TextSection {
@@ -364,117 +377,133 @@ fn show_current_node(
         Node::Simple { content, extra, .. } => {
             commands.entity(first_page).with_children(|parent| {
                 parent.spawn((
-                    TextBundle::from_section(
-                        (content)(&graph.context),
-                        TextStyle {
-                            font: fonts.normal.clone(),
-                            font_size: 50.,
-                            color: Color::BLACK,
-                        },
-                    ),
+                    get_formatted_text((content)(&graph.context), &fonts),
                     Erasable,
                 ));
             });
             commands.entity(second_page).with_children(|parent| {
-                parent.spawn((
-                    ImageBundle {
-                        image: extra.illustration.clone().into(),
+                parent
+                    .spawn(NodeBundle {
+                        style: Style {
+                            position_type: PositionType::Relative,
+                            width: Val::Percent(100.),
+                            ..default()
+                        },
                         ..default()
-                    },
-                    Erasable,
-                ));
+                    })
+                    .with_children(|parent| {
+                        parent.spawn(ImageBundle {
+                            image: textures.roses_frame.clone().into(),
+                            style: Style {
+                                position_type: PositionType::Absolute,
+                                top: Val::Px(0.),
+                                left: Val::Px(0.),
+                                margin: UiRect {
+                                    top: Val::Px(-15.),
+                                    left: Val::Px(-15.),
+                                    ..default()
+                                },
+                                height: Val::Px(50.),
+                                width: Val::Px(50.),
+                                ..default()
+                            },
+                            ..default()
+                        });
+                        let mut flipped_roses_frame: UiImage = textures.roses_frame.clone().into();
+                        flipped_roses_frame.flip_x = true;
+                        flipped_roses_frame.flip_y = true;
+                        parent.spawn(ImageBundle {
+                            image: flipped_roses_frame,
+                            style: Style {
+                                position_type: PositionType::Absolute,
+                                bottom: Val::Px(0.),
+                                right: Val::Px(0.),
+                                margin: UiRect {
+                                    bottom: Val::Px(-15.),
+                                    right: Val::Px(-15.),
+                                    ..default()
+                                },
+                                height: Val::Px(50.),
+                                width: Val::Px(50.),
+                                ..default()
+                            },
+                            ..default()
+                        });
+                        parent.spawn((
+                            TextBundle::from_section(
+                                (extra.additional_text)(&graph.context),
+                                TextStyle {
+                                    font: fonts.normal.clone(),
+                                    font_size: 30.,
+                                    color: Color::BLACK,
+                                },
+                            ),
+                            Erasable,
+                        ));
+                        // parent
+                        // .spawn(NodeBundle {
+                        //     style: Style {
+                        //         position_type: PositionType::Relative,
+                        //         top: Val::Px(0.),
+                        //         left: Val::Px(0.),
+                        //         margin: UiRect {
+                        //             left: Val::Percent(-50.),
+                        //             top: Val::Percent(-50.),
+                        //             ..default()
+                        //         },
+                        //         ..default()
+                        //     },
+                        //     ..default()
+                        // })
+                        // .with_children(|parent| {
+                        // });
+                    });
+                if let Some(ref illustration) = extra.illustration {
+                    parent.spawn((
+                        ImageBundle {
+                            image: illustration.clone().into(),
+                            style: Style {
+                                width: Val::Percent(100.),
+                                ..default()
+                            },
+                            ..default()
+                        },
+                        Erasable,
+                    ));
+                }
             });
             true
         }
     }
 }
 
-fn setup_graph(mut commands: Commands, textures: Res<TextureAssets>) {
-    let graph = book_content::get_book_content(&textures);
+fn setup_graph(mut commands: Commands, illustrations: Res<Illustrations>) {
+    let mut graph = book_content::get_book_content(&illustrations);
+    // TODO: For testing, remove.
+    graph.set_current_node(1);
     commands.insert_resource(graph);
 }
 
-#[derive(Component)]
-pub struct FirstPage;
-
-#[derive(Component)]
-pub struct SecondPage;
-
-fn setup_book(mut commands: Commands, models: Res<ModelAssets>) {
-    commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(-0.5, 3.0, 0.0).looking_at(Vec3::ZERO, Vec3::Y),
-        camera: Camera {
-            order: 1,
-            ..default()
-        },
-        ..default()
-    });
-    commands.spawn(SceneBundle {
-        scene: models.book.clone(),
-        ..default()
-    });
-    commands.spawn(DirectionalLightBundle {
-        directional_light: DirectionalLight {
-            shadows_enabled: true,
-            ..default()
-        },
-        transform: Transform::from_xyz(3.0, 9.0, 3.0).looking_at(Vec3::ZERO, Vec3::Y),
-        ..default()
-    });
-    commands
-        .spawn(NodeBundle {
-            style: Style {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-                padding: UiRect {
-                    left: Val::Percent(8.0),
-                    right: Val::Percent(8.0),
-                    ..default()
-                },
-                flex_direction: FlexDirection::Row,
-                align_items: AlignItems::Center,
-                justify_content: JustifyContent::Center,
-                ..default()
+fn get_formatted_text(text: &str, fonts: &Res<FontAssets>) -> TextBundle {
+    let mut chars_iter = text.chars();
+    let first_letter = chars_iter.next().unwrap();
+    let rest: String = chars_iter.collect();
+    TextBundle::from_sections(vec![
+        TextSection {
+            value: first_letter.to_string(),
+            style: TextStyle {
+                font: fonts.first_letter.clone(),
+                font_size: 100.,
+                color: FIRST_LETTER_COLOR,
             },
-            ..default()
-        })
-        .with_children(|children| {
-            // First page.
-            children.spawn((
-                NodeBundle {
-                    style: Style {
-                        width: Val::Percent(30.0),
-                        height: Val::Percent(80.0),
-                        padding: UiRect::all(Val::Px(20.0)),
-                        display: Display::Flex,
-                        flex_direction: FlexDirection::Column,
-                        // border: UiRect::all(Val::Px(2.)),
-                        ..default()
-                    },
-                    // border_color: Color::RED.into(),
-                    ..default()
-                },
-                FirstPage,
-            ));
-
-            // Second page.
-            children.spawn((
-                NodeBundle {
-                    style: Style {
-                        width: Val::Percent(35.0),
-                        height: Val::Percent(80.0),
-                        padding: UiRect::all(Val::Px(20.0)),
-                        display: Display::Flex,
-                        flex_direction: FlexDirection::Column,
-                        justify_content: JustifyContent::SpaceAround,
-                        margin: UiRect::left(Val::Px(40.0)),
-                        // border: UiRect::all(Val::Px(2.)),
-                        ..default()
-                    },
-                    // border_color: Color::RED.into(),
-                    ..default()
-                },
-                SecondPage,
-            ));
-        });
+        },
+        TextSection {
+            value: rest,
+            style: TextStyle {
+                font: fonts.normal.clone(),
+                font_size: 30.,
+                color: Color::BLACK,
+            },
+        },
+    ])
 }
