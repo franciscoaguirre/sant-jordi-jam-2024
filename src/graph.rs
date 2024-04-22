@@ -178,11 +178,11 @@ mod tests {
     }
 
     impl ChoiceTrait<TestContext> for TestChoice {
-        fn next_node(&self, context: &TestContext) -> usize {
+        fn next_node(&self, _: &TestContext) -> usize {
             self.next
         }
 
-        fn change_state(&self, context: &mut TestContext) {}
+        fn change_state(&self, _: &mut TestContext) {}
     }
 
     #[derive(Debug, Default)]
