@@ -308,6 +308,8 @@ fn interact_with_options(
     mut transition: EventWriter<Transition>,
     mut erase_everything: EventWriter<EraseEverything>,
     mut show_arrow: EventWriter<ShowArrow>,
+    audio: Res<Audio>,
+    audio_assets: Res<AudioAssets>,
 ) {
     if let Lifecycle::Choosing = lifecycle.0 {
         for (interaction, choice, mut background_color) in interaction_query.iter_mut() {
@@ -319,6 +321,7 @@ fn interact_with_options(
                     *background_color = BUTTON_NORMAL_COLOR.into();
                 }
                 Interaction::Pressed => {
+                    audio.play(audio_assets.scribble.clone()).with_volume(5.);
                     *background_color = BUTTON_PRESSED_COLOR.into();
                     option_chosen.send(OptionChosen {
                         index: choice.index,

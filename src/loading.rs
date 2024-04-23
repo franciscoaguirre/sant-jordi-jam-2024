@@ -42,6 +42,8 @@ pub struct AudioAssets {
     pub background_music: Handle<AudioSource>,
     #[asset(path = "audio/page-flip.ogg")]
     pub page_flip: Handle<AudioSource>,
+    #[asset(path = "audio/scribble.ogg")]
+    pub scribble: Handle<AudioSource>,
 }
 
 #[derive(AssetCollection, Resource)]
