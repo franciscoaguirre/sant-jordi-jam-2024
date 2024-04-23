@@ -434,6 +434,7 @@ fn show_current_node(
                                     align_items: AlignItems::Center,
                                     margin: UiRect::top(Val::Px(if index == 0 { 0. } else { 10. })),
                                     border: UiRect::all(Val::Px(2.0)),
+                                    padding: UiRect::all(Val::Px(2.)),
                                     ..default()
                                 },
                                 border_color: Color::BLACK.into(),
@@ -447,16 +448,18 @@ fn show_current_node(
                             Erasable,
                         ))
                         .with_children(|parent| {
-                            if let Some(ref illustration) = choice.illustration {
-                                parent.spawn(ImageBundle {
+                            let image = if let Some(ref illustration) = choice.illustration {
+                                Some(ImageBundle {
                                     image: illustration.clone().into(),
                                     style: Style {
                                         height: Val::Px(150.),
                                         ..default()
                                     },
                                     ..default()
-                                });
-                            }
+                                })
+                            } else {
+                                None
+                            };
                             let sections = utils::process_string_asterisks(&text)
                                 .into_iter()
                                 .enumerate()
@@ -469,7 +472,20 @@ fn show_current_node(
                                             .highlighted
                                     },
                                 });
-                            parent.spawn(TextBundle::from_sections(sections));
+
+                            if index % 2 == 0 {
+                                if let Some(image) = image {
+                                    parent.spawn(image);
+                                }
+
+                                parent.spawn(TextBundle::from_sections(sections));
+                            } else {
+                                parent.spawn(TextBundle::from_sections(sections));
+
+                                if let Some(image) = image {
+                                    parent.spawn(image);
+                                }
+                            }
                         });
                 }
             });
