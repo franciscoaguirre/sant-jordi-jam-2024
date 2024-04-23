@@ -26,7 +26,7 @@ pub fn default_text_styles(fonts: &Res<FontAssets>, too_many_options: bool) -> T
             font_size: 100.,
         },
         normal: TextStyle {
-            color: Color::BLACK,
+            color: Color::hex("3a1e0d").unwrap(),
             font: fonts.normal.clone(),
             font_size: normal_font_size,
         },
@@ -62,6 +62,7 @@ impl Plugin for BookPlugin {
                     flip_page,
                     flip_page_listener,
                     interact_with_end_button,
+                    interact_with_arrow,
                 )
                     .run_if(in_state(GameState::Playing)),
             );
@@ -216,12 +217,30 @@ fn flip_page(
     if matches!(lifecycle.0, Lifecycle::Chosen | Lifecycle::SimpleNode)
         && keyboard_input.just_pressed(KeyCode::Space)
     {
-        audio.play(audio_assets.page_flip.clone());
-        for mut player in players.iter_mut() {
-            player.start(animations.page_flip.clone());
-            event_writer.send_default();
-            erase_everything.send_default();
-        }
+        do_flip_page(
+            &audio,
+            &audio_assets,
+            &mut players,
+            &animations,
+            &mut event_writer,
+            &mut erase_everything,
+        );
+    }
+}
+
+fn do_flip_page(
+    audio: &Res<Audio>,
+    audio_assets: &Res<AudioAssets>,
+    players: &mut Query<&mut AnimationPlayer>,
+    animations: &Res<AnimationAssets>,
+    event_writer: &mut EventWriter<Transition>,
+    erase_everything: &mut EventWriter<EraseEverything>,
+) {
+    audio.play(audio_assets.page_flip.clone());
+    for mut player in players.iter_mut() {
+        player.start(animations.page_flip.clone());
+        event_writer.send_default();
+        erase_everything.send_default();
     }
 }
 
@@ -350,21 +369,28 @@ fn show_arrow_system(
         commands
             .entity(second_page.single())
             .with_children(|parent| {
-                parent.spawn((
-                    ImageBundle {
-                        image: textures.arrow.clone().into(),
-                        style: Style {
-                            position_type: PositionType::Absolute,
-                            bottom: Val::Px(0.),
-                            right: Val::Px(0.),
-                            height: Val::Px(50.),
+                parent
+                    .spawn((
+                        ButtonBundle {
+                            style: Style {
+                                position_type: PositionType::Absolute,
+                                bottom: Val::Px(0.),
+                                right: Val::Px(0.),
+                                height: Val::Px(80.),
+                                ..default()
+                            },
+                            background_color: Color::NONE.into(),
                             ..default()
                         },
-                        ..default()
-                    },
-                    Erasable,
-                    Arrow,
-                ));
+                        Erasable,
+                        Arrow,
+                    ))
+                    .with_children(|parent| {
+                        parent.spawn(ImageBundle {
+                            image: textures.arrow.clone().into(),
+                            ..default()
+                        });
+                    });
             });
     }
 }
@@ -434,13 +460,12 @@ fn show_current_node(
                                     width: Val::Percent(100.),
                                     display: Display::Flex,
                                     flex_direction: FlexDirection::Row,
+                                    position_type: PositionType::Relative,
                                     align_items: AlignItems::Center,
                                     margin: UiRect::top(Val::Px(if index == 0 { 0. } else { 10. })),
-                                    border: UiRect::all(Val::Px(2.0)),
-                                    padding: UiRect::all(Val::Px(2.)),
+                                    padding: UiRect::all(Val::Px(5.)),
                                     ..default()
                                 },
-                                border_color: Color::BLACK.into(),
                                 ..default()
                             },
                             ChoicesOption {
@@ -451,6 +476,21 @@ fn show_current_node(
                             Erasable,
                         ))
                         .with_children(|parent| {
+                            parent.spawn((
+                                ImageBundle {
+                                    image: textures.choice_frame.clone().into(),
+                                    style: Style {
+                                        position_type: PositionType::Absolute,
+                                        top: Val::Px(0.),
+                                        bottom: Val::Px(0.),
+                                        width: Val::Percent(100.),
+                                        height: Val::Percent(100.),
+                                        ..default()
+                                    },
+                                    ..default()
+                                },
+                                Erasable,
+                            ));
                             let image = if let Some(ref illustration) = choice.illustration {
                                 Some(ImageBundle {
                                     image: illustration.clone().into(),
@@ -591,6 +631,20 @@ fn show_current_node(
                         Erasable,
                     ));
                 }
+                for decoration in extra.decorations.iter() {
+                    parent.spawn((
+                        ImageBundle {
+                            image: decoration.clone().into(),
+                            style: Style {
+                                max_height: Val::Percent(30.),
+                                margin: UiRect::top(Val::Px(20.)),
+                                ..default()
+                            },
+                            ..default()
+                        },
+                        Erasable,
+                    ));
+                }
                 if let None = next {
                     parent
                         .spawn((ButtonBundle::default(), EndButton, Erasable))
@@ -635,10 +689,42 @@ fn interact_with_end_button(
     }
 }
 
-fn setup_graph(mut commands: Commands, illustrations: Res<Illustrations>, fonts: Res<FontAssets>) {
-    let mut graph = book_content::get_book_content(&illustrations, &fonts);
+fn interact_with_arrow(
+    mut interaction_query: Query<&Interaction, (Changed<Interaction>, With<Button>, With<Arrow>)>,
+    audio: Res<Audio>,
+    audio_assets: Res<AudioAssets>,
+    mut players: Query<&mut AnimationPlayer>,
+    animations: Res<AnimationAssets>,
+    mut event_writer: EventWriter<Transition>,
+    mut erase_everything: EventWriter<EraseEverything>,
+) {
+    for interaction in interaction_query.iter_mut() {
+        match *interaction {
+            Interaction::Pressed => {
+                do_flip_page(
+                    &audio,
+                    &audio_assets,
+                    &mut players,
+                    &animations,
+                    &mut event_writer,
+                    &mut erase_everything,
+                );
+            }
+            Interaction::Hovered => {}
+            Interaction::None => {}
+        }
+    }
+}
+
+fn setup_graph(
+    mut commands: Commands,
+    illustrations: Res<Illustrations>,
+    fonts: Res<FontAssets>,
+    ui_textures: Res<UiTextures>,
+) {
+    let graph = book_content::get_book_content(&illustrations, &fonts, &ui_textures);
     // TODO: For testing, remove.
-    // graph.set_current_node(43);
+    // graph.set_current_node(18);
     commands.insert_resource(graph);
 }
 

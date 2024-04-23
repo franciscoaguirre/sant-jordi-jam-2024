@@ -78,9 +78,16 @@ pub struct UiTextures {
     pub end_button_hover: Handle<Image>,
     #[asset(path = "textures/arrow.png")]
     pub arrow: Handle<Image>,
+    #[asset(path = "textures/flower-orange.png")]
+    pub flower_orange: Handle<Image>,
+    #[asset(path = "textures/green-fancy-underline.png")]
+    pub green_fancy_underline: Handle<Image>,
+    #[asset(path = "textures/cover.png")]
+    pub cover: Handle<Image>,
+    #[asset(path = "textures/choice-frame.png")]
+    pub choice_frame: Handle<Image>,
 }
 
-// TODO: Not using IMG_25.png
 #[derive(AssetCollection, Resource)]
 pub struct Illustrations {
     #[asset(path = "illustrations/normal-dragon.png")]
@@ -135,6 +142,8 @@ pub struct Illustrations {
     pub princess_thinking: Handle<Image>,
     #[asset(path = "illustrations/dragon-x-sant-jordi.png")]
     pub dragon_x_sant_jordi: Handle<Image>,
+    #[asset(path = "illustrations/dragon-and-jordi-dragon-go-to-scotland.png")]
+    pub dragon_and_jordi_dragon_go_to_scotland: Handle<Image>,
 }
 
 #[derive(AssetCollection, Resource)]

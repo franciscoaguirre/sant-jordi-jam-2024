@@ -35,12 +35,14 @@ pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
-        app.init_state::<GameState>().add_plugins((
-            LoadingPlugin,
-            MenuPlugin,
-            ActionsPlugin,
-            BookPlugin,
-            AudioPlugin,
-        ));
+        app.init_state::<GameState>()
+            .add_plugins((
+                LoadingPlugin,
+                MenuPlugin,
+                ActionsPlugin,
+                BookPlugin,
+                AudioPlugin,
+            ))
+            .add_systems(Update, bevy::window::close_on_esc);
     }
 }

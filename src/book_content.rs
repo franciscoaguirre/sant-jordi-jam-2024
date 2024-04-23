@@ -6,7 +6,7 @@ use crate::{
     arc,
     book::default_text_styles,
     graph::{ChoiceTrait, Graph, Node},
-    loading::{FontAssets, Illustrations},
+    loading::{FontAssets, Illustrations, UiTextures},
 };
 
 type WithContext<Result> = Arc<dyn Fn(&BookContext) -> Result + Sync + Send>;
@@ -22,10 +22,36 @@ pub struct TextStyles {
 pub struct SimpleContent {
     pub text: WithContext<&'static str>,
     pub text_styles: Option<TextStyles>,
+    /// Decoration images that go below the text.
+    pub decorations: Vec<Handle<Image>>,
+}
+
+impl Default for SimpleContent {
+    fn default() -> Self {
+        Self {
+            text: arc!(""),
+            text_styles: None,
+            decorations: Vec::new(),
+        }
+    }
 }
 
 #[macro_export]
 macro_rules! content {
+    ($inner:expr, $fonts:expr, first_letter = $color:expr, too_many_options, $(decorations = $decoration:expr),*) => {
+        SimpleContent {
+            text: $inner,
+            text_styles: Some(TextStyles {
+                first_letter: TextStyle {
+                    font: $fonts.first_letter.clone(),
+                    font_size: 100.,
+                    color: $color,
+                },
+                ..default_text_styles($fonts, true)
+            }),
+            decorations: vec![$($decoration),*],
+        }
+    };
     ($inner:expr, $fonts:expr, first_letter = $color:expr, too_many_options) => {
         SimpleContent {
             text: $inner,
@@ -37,6 +63,7 @@ macro_rules! content {
                 },
                 ..default_text_styles($fonts, true)
             }),
+            ..default()
         }
     };
     ($inner:expr, $fonts:expr, first_letter = $color:expr) => {
@@ -50,6 +77,7 @@ macro_rules! content {
                 },
                 ..default_text_styles($fonts, false)
             }),
+            ..default()
         }
     };
     ($inner:expr, $fonts:expr, highlighted = $color:expr) => {
@@ -63,12 +91,21 @@ macro_rules! content {
                 },
                 ..default_text_styles($fonts, false)
             }),
+            ..default()
+        }
+    };
+    ($inner:expr, $(decorations = $decoration:expr),*) => {
+        SimpleContent {
+            text: $inner,
+            text_styles: None,
+            decorations: vec![$($decoration),*],
         }
     };
     ($inner:expr) => {
         SimpleContent {
             text: $inner,
             text_styles: None,
+            ..default()
         }
     };
 }
@@ -78,6 +115,17 @@ pub type BookGraph = Graph<SimpleContent, SimpleExtra, NodeChoice, BookContext>;
 pub struct SimpleExtra {
     pub illustration: Option<Handle<Image>>,
     pub additional_text: WithContext<&'static str>,
+    pub decorations: Vec<Handle<Image>>,
+}
+
+impl Default for SimpleExtra {
+    fn default() -> Self {
+        Self {
+            illustration: None,
+            additional_text: arc!(""),
+            decorations: Vec::new(),
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -113,12 +161,16 @@ pub struct BookContext {
     salir_cueva: bool,
 }
 
-pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) -> BookGraph {
+pub fn get_book_content(
+    textures: &Res<Illustrations>,
+    fonts: &Res<FontAssets>,
+    ui_textures: &Res<UiTextures>,
+) -> BookGraph {
     let mut graph = BookGraph::new();
     graph.add_node(
         0,
         Node::Fork {
-            content: content!(arc!("Erase una vez, un *terrible dragón* que atemorizaba la villa de Montblanc...")),
+            content: content!(arc!("Erase una vez, un *terrible dragón* que atemorizaba la villa de Montblanc..."), decorations = ui_textures.rabbit_troubadour.clone()),
             choices: vec![
                 NodeChoice {
                     text: arc!("Erase una vez, *un hombre claramente disfrazado de dragón* que, por algún motivo, atemorizaba la villa de Montblanc..."),
@@ -144,6 +196,7 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
             extra: SimpleExtra {
                 illustration: Some(textures.jordi_dragon_with_cow.clone()),
                 additional_text: arc!("De hecho, algunas reses eran casi tan grandes como el \"dragón\"..."),
+                ..default()
             },
             next: Some(2),
         },
@@ -151,24 +204,24 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
     graph.add_node(
         2,
         Node::Fork {
-            content: content!(arc!("Con la villa desesperada, el rey no tuvo más alternativa que hacer un *sorteo* para ofrecerle a la bestia sacrificios humanos, ignorando que el destino, confuso y sibilino, se conjuraría en su contra con el sacrificio de su propia hija..."), fonts, first_letter = Color::hex("3d793a").unwrap(), too_many_options),
+            content: content!(arc!("Con la villa desesperada, el rey no tuvo más alternativa que hacer un *sorteo* para ofrecerle a la bestia sacrificios humanos, ignorando que el destino, confuso y sibilino, se conjuraría en su contra con el sacrificio de su propia hija..."), fonts, first_letter = Color::hex("3d793a").unwrap(), too_many_options, decorations = ui_textures.green_fancy_underline.clone()),
             choices: vec![
                 NodeChoice {
-                    text: arc!("La princesa Cleodolinda, cansada de los inútiles intentos de la gente de la villa por calmar la situación, se ofreció voluntaria para *matar al dragón*"),
+                    text: arc!("La princesa Cleodolinda, cansada de los inútiles intentos de la gente de la villa por calmar la situación, se ofreció para *matar al dragón*"),
                     illustration: Some(textures.princess_go_kill_dragon.clone()),
                     additional_text: arc!("Espada en mano y paso decididio, se dirigió a la cueva donde se escondía el dragón."),
                     state_change: arc!(|context| context.princesa_guerrera = true),
                     next: arc!(3),
                 },
                 NodeChoice {
-                    text: arc!("La princesa Cleodolinda, *deseosa por conocer a un dragón de verdad*, se ofreció voluntaria para utilizar sus extensos conocimientos de dragones para solventar la situación"),
+                    text: arc!("La princesa Cleodolinda, *deseosa por conocer a un dragón de verdad*, se ofreció voluntaria para solventar la situación"),
                     illustration: Some(textures.princess_excited_to_be_picked.clone()),
                     additional_text: arc!("Con su enciclopedia favorita de dragones bajo el brazo, se dirigió a la cueva de la bestia sin ningún temor."),
                     state_change: arc!(|context| context.fan_dragones = true),
                     next: arc!(3),
                 },
                 NodeChoice {
-                    text: arc!("Pero cuando vió que él mismo fue el escogido en el sorteo, preso de su propia cobardía, les dijo a todos que la princesa Cleodolinda, su propia hija, fue la *desaventurada víctima de la fortuna...*"),
+                    text: arc!("Pero cuando vió que él mismo fue el escogido en el sorteo, les dijo a todos que la princesa Cleodolinda, su propia hija, fue la *desaventurada víctima de la fortuna...*"),
                     illustration: Some(textures.king_picks_princess.clone()),
                     additional_text: arc!("No fue una gran sorpresa para Cleodolinda, pero aún asi aceptó su destino y se encaminó hacia la guarida del dragón."),
                     state_change: arc!(|context| context.princesa_rechazada = true),
@@ -213,6 +266,7 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
             extra: SimpleExtra {
                 illustration: Some(textures.princess_punches_jordi_dragon.clone()),
                 additional_text: arc!("Estaba claro que la princesa no había hecho todo este viaje para quedarse ahora de brazos cruzados."),
+                ..default()
             },
             next: Some(5),
         },
@@ -224,6 +278,7 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
             extra: SimpleExtra {
                 illustration: Some(textures.jordi_dragon_confesses.clone()),
                 additional_text: arc!("La princesa, iracunda, exigió explicaciones a Sant Jordi, indignada ante semejante deshonra a la caballería."),
+                ..default()
             },
             next: Some(6),
         }
@@ -235,6 +290,7 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
             extra: SimpleExtra {
                 illustration: Some(textures.dragon_returns_from_holidays.clone()),
                 additional_text: arc!("Pero antes de poder terminar sus explicaciones y justificarse, el dragón (que se ve que había estado de vacaciones) regresó, dejando helado al pobre caballero."),
+                ..default()
             },
             next: Some(7),
         },
@@ -246,6 +302,7 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
             extra: SimpleExtra {
                 illustration: Some(textures.princess_x_dragon.clone()),
                 additional_text: arc!("Y así, la villa de Montblanc regresó a la normalidad y tranquilidad que la caracterizaba... Al menos, hasta que apareciese el siguiente \"dragón\"..."),
+                ..default()
             },
             next: None,
         },
@@ -257,6 +314,7 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
             extra: SimpleExtra {
                 illustration: Some(textures.princess_analyzing_jordi_dragon.clone()),
                 additional_text: arc!("Mientras que a cualquier otro habitante de la villa le temblarían las manos de pavor, a ella le temblaban de pura emoción."),
+                ..default()
             },
             next: Some(9),
         },
@@ -268,6 +326,7 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
             extra: SimpleExtra {
                 illustration: Some(textures.jordi_dragon_confesses.clone()),
                 additional_text: arc!("Oscilando entre el puchero y la ira, Cleodolinda exigió explicaciones al vil caballero."),
+                ..default()
             },
             next: Some(6),
         },
@@ -279,6 +338,7 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
             extra: SimpleExtra {
                 illustration: Some(textures.princess_unmasks_jordi_dragon.clone()),
                 additional_text: arc!("De hecho, fijándose bien, se podían ver claramente las marcas de costura en el traje de dragón."),
+                ..default()
             },
             next: Some(11),
         },
@@ -290,6 +350,7 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
             extra: SimpleExtra {
                 illustration: Some(textures.jordi_dragon_confesses.clone()),
                 additional_text: arc!("Lejos de enfadarse o indignarse, Cleodolinda se vio inundada por una terrible ola de frustración."),
+                ..default()
             },
             next: Some(6),
         },
@@ -323,6 +384,7 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
             extra: SimpleExtra {
                 illustration: Some(textures.sant_jordi_fighting_alone.clone()),
                 additional_text: arc!("Si bien lo que estaba haciendo Sant Jordi no estaba muy claro, sobre lo que no cabía duda era que allí dentro no había dragón alguno."),
+                ..default()
             },
             next: Some(14),
         },
@@ -332,8 +394,9 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
         Node::Simple {
             content: content!(arc!("Cleodolinda, se dio cuenta de que algo no cuadraba, sobretodo cuando en un rincón de la guarida vio lo que parecía ser un disfraz de dragón algo cutre tirado en el suelo... ¡Sant Jordi había sido el dragón todo ese tiempo!")),
             extra: SimpleExtra {
-                illustration: None, // TODO: There was no texture...
+                illustration: None,
                 additional_text: arc!("El caballero claramente le había estado tomando el pelo pero... ¿por qué?"),
+                decorations: vec![ui_textures.cat.clone()],
             },
             next: Some(15),
         },
@@ -344,7 +407,8 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
             content: content!(arc!("La princesa acusó a Sant Jordi, quien confesó que durante todo este tiempo había estado disfrazándose de dragón, para luego darse caza él mismo y llevarse la fama. Cleodolinda empezó a reñir severamente al caballero que, sorprendentemente, parecía aterrado...")),
             extra: SimpleExtra {
                 illustration: Some(textures.dragon_returns_from_holidays.clone()),
-                additional_text: arc!("...aunque no precisamente de ella..."),
+                additional_text: arc!("Aunque no precisamente de ella..."),
+                ..default()
             },
             next: Some(16),
         },
@@ -356,6 +420,7 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
             extra: SimpleExtra {
                 illustration: Some(textures.princess_x_dragon.clone()),
                 additional_text: arc!("Y así, la villa de Montblanc regresó a la normalidad y tranquilidad que la caracterizaba... Al menos, hasta que apareciese el siguiente \"dragón\"..."),
+                ..default()
             },
             next: None,
         },
@@ -367,6 +432,7 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
             extra: SimpleExtra {
                 illustration: Some(textures.sant_jordi_with_dragon_head.clone()),
                 additional_text: arc!("Así a la luz del día tampoco parecía gran cosa, pero bueno, a Sant Jordi se le veía orgulloso."),
+                ..default()
             },
             next: Some(18),
         },
@@ -377,8 +443,9 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
             content:
                 content!(arc!("Cleodolinda, algo escéptica, se dio cuenta de que algo no terminaba de encajar...")), // TODO: Should use context here to differentiate a bit.
             extra: SimpleExtra {
-                illustration: None, // TODO: There was no texture...
+                illustration: None,
                 additional_text: arc!("De hecho, se podían ver las marcas de costura en la \"cabeza del dragón\"... ¿Qué pretendía Sant Jordi con todo esto?"),
+                decorations: vec![ui_textures.rabbit_troubadour.clone()],
             },
             next: Some(15),
         },
@@ -388,8 +455,9 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
         Node::Simple {
             content: content!(arc!("Sant Jordi, notablemente incómodo, le contó a Cleodolinda que las rosas habían salido de la sangre del dragón cuando lo mató...")),
             extra: SimpleExtra {
-                illustration: None, // TODO: No texture.
+                illustration: None,
                 additional_text: arc!("Cleodolinda, algo escéptica ante el más que evidente nerviosismo del caballero, le pidió pruebas de la muerte del dragón."),
+                decorations: vec![ui_textures.snail_boy.clone()],
             },
             next: Some(20),
         },
@@ -401,6 +469,7 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
             extra: SimpleExtra {
                 illustration: Some(textures.sant_jordi_with_dragon_head.clone()),
                 additional_text: arc!(|context| if context.princesa_rechazada || context.princesa_guerrera { "Cleodolinda, algo escéptica, se dio cuenta de que algo no terminaba de encajar..." } else if context.fan_dragones { "Cleodolinda, que de dragones sabía un rato, reconoció que claramente esa cabeza no era real..." } else { unreachable!("Some flag should've been set."); }),
+                ..default()
             },
             next: Some(21),
         },
@@ -411,7 +480,8 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
             content: content!(arc!("Si cabía todavía alguna duda de que Sant Jordi no estaba siendo del todo sincero...")),
             extra: SimpleExtra {
                 illustration: Some(textures.sensual_dragon_coming_out_of_cave.clone()),
-                additional_text: arc!("...digamos que de pronto se esclareció todo..."),
+                additional_text: arc!("Digamos que de pronto se esclareció todo..."),
+                ..default()
             },
             next: Some(22),
         },
@@ -443,8 +513,9 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
         Node::Simple {
             content: content!(arc!("La villa se enteró del romance prohibido del dragón y Sant Jordi, lo que obligó a la pareja a vivir su luna de miel en Escocia")),
             extra: SimpleExtra {
-                illustration: None, // TODO: No texture.
+                illustration: Some(textures.dragon_and_jordi_dragon_go_to_scotland.clone()),
                 additional_text: arc!("Seguro que allí serían más tolerantes..."),
+                ..default()
             },
             next: None,
         },
@@ -456,6 +527,7 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
             extra: SimpleExtra {
                 illustration: None, // TODO: No texture.
                 additional_text: arc!("Y así, una vez más, el amor prevaleció por encima de todo."),
+                ..default()
             },
             next: None,
         },
@@ -467,6 +539,7 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
             extra: SimpleExtra {
                 illustration: Some(textures.dragon_with_cow.clone()),
                 additional_text: arc!("Al menos el dragón tendría compañía..."),
+                ..default()
             },
             next: Some(26),
         },
@@ -535,14 +608,14 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
             content: content!(arc!("Cleodolinda, intrigada por el extraño dragón, decidió acercarse para \"tantear\" el terreno, a lo que el dragón respondió...")),
             choices: vec![
                 NodeChoice {
-                    text: arc!("...dejándose llevar."),
+                    text: arc!("Dejándose llevar."),
                     illustration: Some(textures.jordi_dragon_accepts_princess.clone()),
                     additional_text: arc!("El amor funciona de manera misteriosa... ¿Quiénes somos nosotros para juzgar?"),
                     state_change: arc!({}),
                     next: arc!(29),
                 },
                 NodeChoice {
-                    text: arc!("...rechazando, incómodo, el extraño acercamiento de Cleodolinda."),
+                    text: arc!("Rechazando, incómodo, el extraño acercamiento de Cleodolinda."),
                     illustration: Some(textures.jordi_dragon_rejects_princess.clone()),
                     additional_text: arc!("Se ve que no era su tipo... Ni su especie..."),
                     state_change: arc!({}),
@@ -558,6 +631,7 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
             extra: SimpleExtra {
                 illustration: Some(textures.princess_dragon.clone()),
                 additional_text: arc!("¡Rayos y centellas! ¡Quién se lo hubiera imaginado! ¿La hija del Rey... el dragón?"),
+                ..default()
             },
             next: Some(30),
         },
@@ -569,6 +643,7 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
             extra: SimpleExtra {
                 illustration: Some(textures.dragon_x_jordi_dragon.clone()),
                 additional_text: arc!("Y así, vivieron felices para siempre demostrando una vez más que el amor es ciego."),
+                ..default()
             },
             next: None,
         },
@@ -578,8 +653,9 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
         Node::Simple {
             content: content!(arc!("Cleodolinda no se amilanó y prosiguió con sus acercamientos, asumiendo que solo se estaba haciendo el difícil. Sin embargo el dragón, sintiéndose acosado por los continuos e inexplicables avances de la princesa, reveló su verdadera identidad. ¡Era Sant Jordi todo este tiempo!")),
             extra: SimpleExtra {
-                illustration: None, // TODO: What goes here?
+                illustration: Some(textures.jordi_dragon_confesses.clone()),
                 additional_text: arc!("El reputado caballero disfrazado de dragón... ¿acaso ya no quedaba gente honrada?"),
+                ..default()
             },
             next: Some(32),
         },
@@ -591,6 +667,7 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
             extra: SimpleExtra {
                 illustration: Some(textures.princess_dragon.clone()),
                 additional_text: arc!("Sant Jordi no lo sabía pero todo este tiempo había estado jugando con fuego..."),
+                ..default()
             },
             next: Some(33),
         },
@@ -602,6 +679,7 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
             extra: SimpleExtra {
                 illustration: Some(textures.dragon_chases_jordi_dragon.clone()),
                 additional_text: arc!(""),
+                ..default()
             },
             next: None,
         },
@@ -635,6 +713,7 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
             extra: SimpleExtra {
                 illustration: Some(textures.sant_jordi_fighting_alone.clone()),
                 additional_text: arc!("Si bien lo que estaba haciendo Sant Jordi no estaba muy claro, sobre lo que no cabía duda era que allí dentro no había dragón alguno."),
+                ..default()
             },
             next: Some(36),
         },
@@ -646,6 +725,7 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
             extra: SimpleExtra {
                 illustration: Some(textures.princess_dragon.clone()),
                 additional_text: arc!("Sant Jordi no lo sabía pero todo este tiempo había estado jugando con fuego..."),
+                ..default()
             },
             next: Some(37),
         },
@@ -657,6 +737,7 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
             extra: SimpleExtra {
                 illustration: Some(textures.dragon_chases_jordi_dragon.clone()),
                 additional_text: arc!(""),
+                ..default()
             },
             next: None,
         },
@@ -668,6 +749,7 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
             extra: SimpleExtra {
                 illustration: Some(textures.sant_jordi_with_dragon_head.clone()),
                 additional_text: arc!("Así a la luz del día tampoco parecía gran cosa, pero bueno, a Sant Jordi se le veía orgulloso."),
+                ..default()
             },
             next: Some(39),
         },
@@ -681,6 +763,7 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
             extra: SimpleExtra {
                 illustration: Some(textures.princess_dragon.clone()),
                 additional_text: arc!("Sant Jordi no lo sabía pero todo este tiempo había estado jugando con fuego..."),
+                ..default()
             },
             next: Some(40),
         },
@@ -692,6 +775,7 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
             extra: SimpleExtra {
                 illustration: Some(textures.dragon_chases_jordi_dragon.clone()), // TODO: This doesn't seem right.
                 additional_text: arc!(""),
+                ..default()
             },
             next: None,
         },
@@ -725,6 +809,7 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
             extra: SimpleExtra {
                 illustration: Some(textures.dragon_x_sant_jordi.clone()),
                 additional_text: arc!("Seguro que allí serían más tolerantes... "),
+                ..default()
             },
             next: None,
         },
@@ -736,6 +821,7 @@ pub fn get_book_content(textures: &Res<Illustrations>, fonts: &Res<FontAssets>) 
             extra: SimpleExtra {
                 illustration: Some(textures.princess_thinking.clone()),
                 additional_text: arc!("Y así, una vez más, el amor prevaleció por encima de todo."),
+                ..default()
             },
             next: None,
         },

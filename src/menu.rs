@@ -132,9 +132,10 @@ fn setup_book(mut commands: Commands, models: Res<ModelAssets>) {
                             style: Style {
                                 width: Val::Vw(30.0),
                                 height: Val::Vh(80.0),
-                                padding: UiRect::all(Val::Px(20.0)),
+                                padding: UiRect::all(Val::Px(30.0)),
                                 display: Display::Flex,
                                 flex_direction: FlexDirection::Column,
+                                align_items: AlignItems::Center,
                                 // border: UiRect::all(Val::Px(2.)),
                                 ..default()
                             },
@@ -150,7 +151,7 @@ fn setup_book(mut commands: Commands, models: Res<ModelAssets>) {
                             style: Style {
                                 width: Val::Vw(30.0),
                                 height: Val::Vh(80.0),
-                                padding: UiRect::all(Val::Px(20.0)),
+                                padding: UiRect::all(Val::Px(30.0)),
                                 display: Display::Flex,
                                 flex_direction: FlexDirection::Column,
                                 align_items: AlignItems::Center,
@@ -169,10 +170,26 @@ fn setup_book(mut commands: Commands, models: Res<ModelAssets>) {
 
 fn setup_menu(
     mut commands: Commands,
+    first_page: Query<Entity, With<FirstPage>>,
     second_page: Query<Entity, With<SecondPage>>,
     textures: Res<UiTextures>,
     fonts: Res<FontAssets>,
 ) {
+    let mut first_page = commands.entity(first_page.single());
+    first_page.with_children(|parent| {
+        parent.spawn((
+            ImageBundle {
+                image: textures.cover.clone().into(),
+                style: Style {
+                    max_width: Val::Percent(100.),
+                    max_height: Val::Percent(100.),
+                    ..default()
+                },
+                ..default()
+            },
+            Menu,
+        ));
+    });
     let mut second_page = commands.entity(second_page.single());
     second_page.with_children(|parent| {
         parent
@@ -199,7 +216,7 @@ fn setup_menu(
                         parent.spawn(ImageBundle {
                             image: textures.play_button.clone().into(),
                             style: Style {
-                                height: Val::Px(40.),
+                                height: Val::Px(100.),
                                 ..default()
                             },
                             ..default()
