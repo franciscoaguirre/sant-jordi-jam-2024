@@ -1,21 +1,42 @@
 #![allow(clippy::too_many_arguments)]
 
+use std::iter;
+
 use bevy::{log, prelude::*};
 use bevy_kira_audio::prelude::*;
 
 use crate::{
-    book_content::{self, BookGraph},
+    book_content::{self, BookGraph, TextStyles},
     graph::Node,
     loading::{AnimationAssets, AudioAssets, FontAssets, Illustrations, UiTextures},
     menu::{FirstPage, SecondPage},
-    GameState,
+    utils, GameState,
 };
 
 pub const BUTTON_HOVER_COLOR: Color = Color::rgba(1., 0., 0., 0.5);
 pub const BUTTON_NORMAL_COLOR: Color = Color::NONE;
 pub const BUTTON_PRESSED_COLOR: Color = Color::rgba(0.7, 0., 0., 0.7);
 
-pub const FIRST_LETTER_COLOR: Color = Color::rgba(0.235, 0.039, 0.337, 1.);
+pub fn default_text_styles(fonts: &Res<FontAssets>, too_many_options: bool) -> TextStyles {
+    let normal_font_size = if too_many_options { 25. } else { 30. };
+    TextStyles {
+        first_letter: TextStyle {
+            color: Color::rgb(0.235, 0.039, 0.337),
+            font: fonts.first_letter.clone(),
+            font_size: 100.,
+        },
+        normal: TextStyle {
+            color: Color::BLACK,
+            font: fonts.normal.clone(),
+            font_size: normal_font_size,
+        },
+        highlighted: TextStyle {
+            font: fonts.normal.clone(),
+            font_size: normal_font_size,
+            color: Color::rgb(0.678, 0.047, 0.109),
+        },
+    }
+}
 
 pub struct BookPlugin;
 impl Plugin for BookPlugin {
@@ -110,7 +131,10 @@ fn draw_chosen_option(
 ) {
     for event in events.read() {
         let current_node = graph.get_current_node();
-        let Node::Fork { choices, .. } = current_node else {
+        let Node::Fork {
+            choices, content, ..
+        } = current_node
+        else {
             unreachable!("An option was chosen, it's a fork.");
         };
         // TODO: I could get everything from `current_node`.
@@ -118,7 +142,16 @@ fn draw_chosen_option(
         let chosen_option = &choices[*index];
         let mut first_page = commands.entity(first_page.single());
         first_page.with_children(|parent| {
-            parent.spawn((get_formatted_text(text, &fonts), Erasable));
+            parent.spawn((
+                get_formatted_text(
+                    text,
+                    &content
+                        .text_styles
+                        .clone()
+                        .unwrap_or(default_text_styles(&fonts, false)),
+                ),
+                Erasable,
+            ));
         });
         let mut second_page = commands.entity(second_page.single());
         second_page.with_children(|parent| {
@@ -362,9 +395,19 @@ fn show_current_node(
     let node = graph.get_current_node();
     match node {
         Node::Fork { content, choices } => {
-            let content = (content)(&graph.context);
+            let text = (content.text)(&graph.context);
+            let number_of_choices = choices.len();
             commands.entity(first_page).with_children(|parent| {
-                parent.spawn((get_formatted_text(content, fonts), Erasable));
+                parent.spawn((
+                    get_formatted_text(
+                        text,
+                        &content
+                            .text_styles
+                            .clone()
+                            .unwrap_or(default_text_styles(&fonts, false)),
+                    ),
+                    Erasable,
+                ));
                 parent.spawn((
                     ImageBundle {
                         image: textures.fancy_underline.clone().into(),
@@ -378,7 +421,6 @@ fn show_current_node(
                 ));
             });
             commands.entity(second_page).with_children(|parent| {
-                let number_of_choices = choices.len();
                 for (index, choice) in choices.iter().enumerate() {
                     let text = (choice.text)(&graph.context).to_string();
                     parent
@@ -415,25 +457,19 @@ fn show_current_node(
                                     ..default()
                                 });
                             }
-                            parent.spawn(TextBundle {
-                                text: Text {
-                                    sections: vec![TextSection {
-                                        value: text,
-                                        style: TextStyle {
-                                            font: fonts.normal.clone(),
-                                            font_size: if number_of_choices == 3 {
-                                                25.
-                                            } else {
-                                                30.
-                                            },
-                                            color: Color::BLACK,
-                                        },
-                                    }],
-                                    ..default()
-                                },
-                                style: Style { ..default() },
-                                ..default()
-                            });
+                            let sections = utils::process_string_asterisks(&text)
+                                .into_iter()
+                                .enumerate()
+                                .map(|(index, string)| TextSection {
+                                    value: string,
+                                    style: if index % 2 == 0 {
+                                        default_text_styles(&fonts, number_of_choices == 3).normal
+                                    } else {
+                                        default_text_styles(&fonts, number_of_choices == 3)
+                                            .highlighted
+                                    },
+                                });
+                            parent.spawn(TextBundle::from_sections(sections));
                         });
                 }
             });
@@ -450,7 +486,13 @@ fn show_current_node(
             }
             commands.entity(first_page).with_children(|parent| {
                 parent.spawn((
-                    get_formatted_text((content)(&graph.context), fonts),
+                    get_formatted_text(
+                        (content.text)(&graph.context),
+                        &content
+                            .text_styles
+                            .clone()
+                            .unwrap_or(default_text_styles(&fonts, false)),
+                    ),
                     Erasable,
                 ));
             });
@@ -574,33 +616,32 @@ fn interact_with_end_button(
     }
 }
 
-fn setup_graph(mut commands: Commands, illustrations: Res<Illustrations>) {
-    let mut graph = book_content::get_book_content(&illustrations);
+fn setup_graph(mut commands: Commands, illustrations: Res<Illustrations>, fonts: Res<FontAssets>) {
+    let mut graph = book_content::get_book_content(&illustrations, &fonts);
     // TODO: For testing, remove.
     // graph.set_current_node(43);
     commands.insert_resource(graph);
 }
 
-fn get_formatted_text(text: &str, fonts: &Res<FontAssets>) -> TextBundle {
+fn get_formatted_text(text: &str, text_styles: &TextStyles) -> TextBundle {
     let mut chars_iter = text.chars();
     let first_letter = chars_iter.next().unwrap();
+    let first_letter_section = iter::once(TextSection {
+        value: first_letter.to_string(),
+        style: text_styles.first_letter.clone(),
+    });
     let rest: String = chars_iter.collect();
-    TextBundle::from_sections(vec![
-        TextSection {
-            value: first_letter.to_string(),
-            style: TextStyle {
-                font: fonts.first_letter.clone(),
-                font_size: 100.,
-                color: FIRST_LETTER_COLOR,
+    let rest_sections = utils::process_string_asterisks(&rest)
+        .into_iter()
+        .enumerate()
+        .map(|(index, text)| TextSection {
+            value: text,
+            style: if index % 2 == 0 {
+                text_styles.normal.clone()
+            } else {
+                text_styles.highlighted.clone()
             },
-        },
-        TextSection {
-            value: rest,
-            style: TextStyle {
-                font: fonts.normal.clone(),
-                font_size: 30.,
-                color: Color::BLACK,
-            },
-        },
-    ])
+        });
+    let sections: Vec<TextSection> = first_letter_section.chain(rest_sections).collect();
+    TextBundle::from_sections(sections)
 }

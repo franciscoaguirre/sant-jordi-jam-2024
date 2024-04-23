@@ -4,7 +4,7 @@ use crate::GameState;
 use bevy::prelude::*;
 use bevy_kira_audio::prelude::*;
 
-pub const MENU_BUTTON_RED: Color = Color::rgba(0.678, 0.047, 0.109, 1.);
+pub const MENU_BUTTON_RED: Color = Color::rgb(0.678, 0.047, 0.109);
 
 pub struct MenuPlugin;
 

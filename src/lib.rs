@@ -6,6 +6,7 @@ mod book_content;
 mod graph;
 mod loading;
 mod menu;
+mod utils;
 
 use crate::actions::ActionsPlugin;
 use crate::book::BookPlugin;
