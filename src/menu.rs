@@ -12,22 +12,39 @@ pub struct MenuPlugin;
 /// The menu is only drawn during the State `GameState::Menu` and is removed when that state is exited
 impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
-            OnEnter(GameState::Menu),
-            (
-                start_background_music,
-                setup_book,
-                setup_menu.after(setup_book),
-            ),
-        )
-        .add_systems(Update, click_play_button.run_if(in_state(GameState::Menu)))
-        .add_systems(OnExit(GameState::Menu), cleanup_menu);
+        app.insert_resource(Language::Catalan)
+            .add_systems(
+                OnEnter(GameState::Menu),
+                (
+                    start_background_music,
+                    setup_book,
+                    setup_menu.after(setup_book),
+                ),
+            )
+            .add_systems(
+                Update,
+                (interact_with_language_buttons, click_play_button)
+                    .run_if(in_state(GameState::Menu)),
+            )
+            .add_systems(OnExit(GameState::Menu), cleanup_menu);
     }
 }
 
 fn start_background_music(audio_assets: Res<AudioAssets>, audio: Res<Audio>) {
     audio.play(audio_assets.background_music.clone()).looped();
 }
+
+#[derive(Resource, Clone)]
+pub enum Language {
+    Catalan,
+    Spanish,
+}
+
+#[derive(Component)]
+pub struct PickLanguage(pub Language);
+
+#[derive(Component)]
+pub struct PlayButton;
 
 #[derive(Component)]
 struct Menu;
@@ -37,6 +54,21 @@ pub struct FirstPage;
 
 #[derive(Component)]
 pub struct SecondPage;
+
+fn interact_with_language_buttons(
+    mut interaction_query: Query<(&Interaction, &PickLanguage), Changed<Interaction>>,
+    mut language: ResMut<Language>,
+) {
+    for (interaction, pick_language) in interaction_query.iter_mut() {
+        match *interaction {
+            Interaction::Pressed => {
+                *language = pick_language.0.clone();
+            }
+            Interaction::None => {}
+            _ => {}
+        }
+    }
+}
 
 fn setup_book(mut commands: Commands, models: Res<ModelAssets>) {
     commands.spawn(Camera3dBundle {
@@ -67,10 +99,10 @@ fn setup_book(mut commands: Commands, models: Res<ModelAssets>) {
                 align_items: AlignItems::Center,
                 width: Val::Percent(100.),
                 height: Val::Percent(100.),
-                border: UiRect::all(Val::Px(2.)),
+                // border: UiRect::all(Val::Px(2.)),
                 ..default()
             },
-            border_color: Color::GREEN.into(),
+            // border_color: Color::GREEN.into(),
             ..default()
         })
         .with_children(|parent| {
@@ -87,10 +119,10 @@ fn setup_book(mut commands: Commands, models: Res<ModelAssets>) {
                         flex_direction: FlexDirection::Row,
                         align_items: AlignItems::Center,
                         justify_content: JustifyContent::SpaceBetween,
-                        border: UiRect::all(Val::Px(2.)),
+                        // border: UiRect::all(Val::Px(2.)),
                         ..default()
                     },
-                    border_color: Color::RED.into(),
+                    // border_color: Color::RED.into(),
                     ..default()
                 })
                 .with_children(|children| {
@@ -103,10 +135,10 @@ fn setup_book(mut commands: Commands, models: Res<ModelAssets>) {
                                 padding: UiRect::all(Val::Px(20.0)),
                                 display: Display::Flex,
                                 flex_direction: FlexDirection::Column,
-                                border: UiRect::all(Val::Px(2.)),
+                                // border: UiRect::all(Val::Px(2.)),
                                 ..default()
                             },
-                            border_color: Color::RED.into(),
+                            // border_color: Color::RED.into(),
                             ..default()
                         },
                         FirstPage,
@@ -123,10 +155,10 @@ fn setup_book(mut commands: Commands, models: Res<ModelAssets>) {
                                 flex_direction: FlexDirection::Column,
                                 align_items: AlignItems::Center,
                                 justify_content: JustifyContent::SpaceAround,
-                                border: UiRect::all(Val::Px(2.)),
+                                // border: UiRect::all(Val::Px(2.)),
                                 ..default()
                             },
-                            border_color: Color::RED.into(),
+                            // border_color: Color::RED.into(),
                             ..default()
                         },
                         SecondPage,
@@ -162,7 +194,7 @@ fn setup_menu(
             .with_children(|parent| {
                 // Play button.
                 parent
-                    .spawn(ButtonBundle::default())
+                    .spawn((ButtonBundle::default(), PlayButton))
                     .with_children(|parent| {
                         parent.spawn(ImageBundle {
                             image: textures.play_button.clone().into(),
@@ -174,51 +206,59 @@ fn setup_menu(
                         });
                     });
                 // Language buttons.
-                parent
-                    .spawn(NodeBundle {
-                        style: Style {
-                            display: Display::Flex,
-                            justify_content: JustifyContent::SpaceAround,
-                            ..default()
-                        },
-                        ..default()
-                    })
-                    .with_children(|parent| {
-                        parent
-                            .spawn(ButtonBundle {
-                                background_color: Color::NONE.into(),
-                                ..default()
-                            })
-                            .with_children(|parent| {
-                                parent.spawn(TextBundle::from_section(
-                                    "Català",
-                                    TextStyle {
-                                        font: fonts.normal.clone(),
-                                        font_size: 30.,
-                                        color: MENU_BUTTON_RED,
-                                    },
-                                ));
-                            });
-                        parent
-                            .spawn(ButtonBundle {
-                                background_color: Color::NONE.into(),
-                                style: Style {
-                                    margin: UiRect::left(Val::Px(20.)),
-                                    ..default()
-                                },
-                                ..default()
-                            })
-                            .with_children(|parent| {
-                                parent.spawn(TextBundle::from_section(
-                                    "Castellano",
-                                    TextStyle {
-                                        font: fonts.normal.clone(),
-                                        font_size: 30.,
-                                        color: MENU_BUTTON_RED,
-                                    },
-                                ));
-                            });
-                    });
+                // parent
+                //     .spawn(NodeBundle {
+                //         style: Style {
+                //             display: Display::Flex,
+                //             justify_content: JustifyContent::SpaceAround,
+                //             ..default()
+                //         },
+                //         ..default()
+                //     })
+                //     .with_children(|parent| {
+                //         parent
+                //             .spawn((
+                //                 ButtonBundle {
+                //                     background_color: Color::NONE.into(),
+                //                     border_color: MENU_BUTTON_RED.into(),
+                //                     ..default()
+                //                 },
+                //                 PickLanguage(Language::Catalan),
+                //             ))
+                //             .with_children(|parent| {
+                //                 parent.spawn(TextBundle::from_section(
+                //                     "Català",
+                //                     TextStyle {
+                //                         font: fonts.normal.clone(),
+                //                         font_size: 30.,
+                //                         color: MENU_BUTTON_RED,
+                //                     },
+                //                 ));
+                //             });
+                //         parent
+                //             .spawn((
+                //                 ButtonBundle {
+                //                     background_color: Color::NONE.into(),
+                //                     border_color: MENU_BUTTON_RED.into(),
+                //                     style: Style {
+                //                         margin: UiRect::left(Val::Px(20.)),
+                //                         ..default()
+                //                     },
+                //                     ..default()
+                //                 },
+                //                 PickLanguage(Language::Spanish),
+                //             ))
+                //             .with_children(|parent| {
+                //                 parent.spawn(TextBundle::from_section(
+                //                     "Castellano",
+                //                     TextStyle {
+                //                         font: fonts.normal.clone(),
+                //                         font_size: 30.,
+                //                         color: MENU_BUTTON_RED,
+                //                     },
+                //                 ));
+                //             });
+                //     });
                 // Controls.
                 parent
                     .spawn(NodeBundle {
@@ -300,10 +340,10 @@ fn setup_menu(
                             justify_content: JustifyContent::SpaceAround,
                             height: Val::Percent(30.),
                             width: Val::Percent(100.),
-                            border: UiRect::all(Val::Px(2.)),
+                            // border: UiRect::all(Val::Px(2.)),
                             ..default()
                         },
-                        border_color: Color::RED.into(),
+                        // border_color: Color::RED.into(),
                         ..default()
                     })
                     .with_children(|parent| {
@@ -442,7 +482,7 @@ fn click_play_button(
     mut next_state: ResMut<NextState<GameState>>,
     mut interaction_query: Query<
         (&Interaction, &mut BackgroundColor),
-        (Changed<Interaction>, With<Button>),
+        (Changed<Interaction>, With<PlayButton>),
     >,
 ) {
     for (interaction, mut color) in &mut interaction_query {
