@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::fmt;
 
-use bevy::prelude::*;
+use bevy::{log, prelude::*};
 
 /// Graph where nodes are added along with their indices.
 /// When adding nodes, you must be sure that they're all connected.
@@ -137,6 +137,7 @@ impl<Content, Simple, Choice: ChoiceTrait<Context> + Clone, Context: Default>
         match self.get_current_node() {
             Node::Simple { next, .. } => {
                 if let Some(next_index) = next {
+                    log::info!("Current index: {}", next_index);
                     self.current_node = *next_index;
                 }
             }
@@ -149,6 +150,7 @@ impl<Content, Simple, Choice: ChoiceTrait<Context> + Clone, Context: Default>
         let (next_node, choice) = match self.get_current_node() {
             Node::Fork { choices, .. } => {
                 let next = choices[index].next_node(&self.context);
+                log::info!("Current index: {}", next);
                 let choice = choices[index].clone();
                 (next, choice)
             }

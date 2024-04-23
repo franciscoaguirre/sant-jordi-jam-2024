@@ -70,6 +70,12 @@ pub struct UiTextures {
     pub cat: Handle<Image>,
     #[asset(path = "textures/snail-boy.png")]
     pub snail_boy: Handle<Image>,
+    #[asset(path = "textures/end-button.png")]
+    pub end_button: Handle<Image>,
+    #[asset(path = "textures/end-button-hover.png")]
+    pub end_button_hover: Handle<Image>,
+    #[asset(path = "textures/arrow.png")]
+    pub arrow: Handle<Image>,
 }
 
 // TODO: Not using IMG_25.png

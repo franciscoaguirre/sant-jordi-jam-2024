@@ -106,7 +106,7 @@ pub fn get_book_content(textures: &Res<Illustrations>) -> BookGraph {
                     next: arc!(3),
                 },
                 NodeChoice {
-                    text: arc!("...pero cuando vió que él mismo fue el escogido en el sorteo, preso de su propia cobardía, les dijo a todos que la princesa Cleodolinda, su propia hija, fue la desaventurada víctima de la fortuna..."),
+                    text: arc!("Pero cuando vió que él mismo fue el escogido en el sorteo, preso de su propia cobardía, les dijo a todos que la princesa Cleodolinda, su propia hija, fue la desaventurada víctima de la fortuna..."),
                     illustration: Some(textures.king_picks_princess.clone()),
                     additional_text: arc!("No fue una gran sorpresa para Cleodolinda, pero aún asi aceptó su destino y se encaminó hacia la guarida del dragón."),
                     state_change: arc!(|context| context.princesa_rechazada = true),
@@ -130,7 +130,7 @@ pub fn get_book_content(textures: &Res<Illustrations>) -> BookGraph {
                 NodeChoice {
                     text: arc!("Con un apuesto caballero haciéndose pinturas tribales de guerra, alentándose a sí mismo..."),
                     illustration: Some(textures.sant_jordi_warrior.clone()),
-                    additional_text: arc!("Su libro favorito era El arte de la guerra y especulaba con terrenos"),
+                    additional_text: arc!("Su libro favorito era \"El arte de la guerra\" y especulaba con terrenos"),
                     state_change: arc!(|context| context.encuentra_santjordi_flipado = true),
                     next: arc!(12),
                 },
@@ -360,14 +360,14 @@ pub fn get_book_content(textures: &Res<Illustrations>) -> BookGraph {
             content: arc!("La princesa, escandalizada, decidió..."),
             choices: vec![
                 NodeChoice {
-                    text: arc!("...chivarse del romance al resto de la villa."),
+                    text: arc!("chivarse del romance al resto de la villa."),
                     illustration: None, // TODO: No texture.
                     additional_text: arc!("Cotilla y morbosa, Cleodolinda corrió a la villa para compartir con el todo el mundo la aberrante y cómica relación contra natura que dragón y caballero estaban manteniendo."),
                     state_change: arc!({}),
                     next: arc!(23),
                 },
                 NodeChoice {
-                    text: arc!("...guardar el secreto y contar en la villa una leyenda inventada para cubrirles."),
+                    text: arc!("guardar el secreto y contar en la villa una leyenda inventada para cubrirles."),
                     illustration: None, // TODO: No texture.
                     additional_text: arc!("Conmovida por semejante muestra de amor en contra de toda clase de prejuicios, la princesa decidió ayudarles y mantener su tórrido romance en secreto."),
                     state_change: arc!({}),
@@ -429,7 +429,7 @@ pub fn get_book_content(textures: &Res<Illustrations>) -> BookGraph {
                     next: arc!(27),
                 },
                 NodeChoice {
-                    text: arc!("...pero cuando vió que él mismo fue el escogido en el sorteo, preso de su propia cobardía, les dijo a todos que la princesa Cleodolinda, su propia hija, fue la desaventurada víctima de la fortuna..."),
+                    text: arc!("Pero cuando vió que él mismo fue el escogido en el sorteo, preso de su propia cobardía, les dijo a todos que la princesa Cleodolinda, su propia hija, fue la desaventurada víctima de la fortuna..."),
                     illustration: Some(textures.king_picks_princess.clone()),
                     additional_text: arc!("No fue una gran sorpresa para Cleodolinda, pero aún así aceptó su destino y se encaminó hacia la guarida del dragón."),
                     state_change: arc!(|context| context.princesa_rechazada = true),
@@ -453,7 +453,7 @@ pub fn get_book_content(textures: &Res<Illustrations>) -> BookGraph {
                 NodeChoice {
                     text: arc!("Con un apuesto caballero haciéndose pinturas tribales de guerra, alentándose a sí mismo..."),
                     illustration: Some(textures.sant_jordi_warrior.clone()),
-                    additional_text: arc!("Su libro favorito era El arte de la guerra y especulaba con terrenos"),
+                    additional_text: arc!("Su libro favorito era \"El arte de la guerra\" y especulaba con terrenos"),
                     state_change: arc!(|context| context.encuentra_santjordi_flipado = true),
                     next: arc!(34),
                 },
@@ -550,14 +550,14 @@ pub fn get_book_content(textures: &Res<Illustrations>) -> BookGraph {
             content: arc!("Sant Jordi, sacando pecho y guiñándole un ojo, le dijo a Cleodolinda: \"tranquila princesa, yo me encargo del dragoncito\". Y sin esperar respuesta, el caballero se adentró en las profundidades de la cueva de la bestia. Mientras tanto, Cleodolinda decidió..."),
             choices: vec![
                 NodeChoice {
-                    text: arc!("...entrar con Sant Jordi a la cueva."),
+                    text: arc!("entrar con Sant Jordi a la cueva."),
                     illustration: None,
                     additional_text: arc!(|context| if context.princesa_guerrera { "Cleodolinda, todavía con ganas de algo de acción, siguió al caballero procurando que no la viera." } else if context.fan_dragones { "Cleodolinda, demasiado ansiosa por la posibilidad de ver un dragón real, siguió de cerca a Sant Jordi y se adentró tras él en la guarida de la criatura." } else if context.princesa_rechazada { "No creyéndose del todo al quizás algo flipado caballero, Cleodolinda le siguió de cerca y se adentró en la guarida de la bestia." } else { unreachable!("Some flag should've been set.") }),
                     state_change: arc!({}),
                     next: arc!(35),
                 },
                 NodeChoice {
-                    text: arc!("...esperar fuera."),
+                    text: arc!("esperar fuera."),
                     illustration: None,
                     additional_text: arc!(|context| if context.princesa_guerrera { "Cleodolinda, sabiendo que Sant Jordi no podría acabar con un dragón él solo, se quedó fuera esperando a que saliera despavorido en busca de ayuda." } else if context.fan_dragones { "Siendo consciente del peligro que tenía exponerse a un dragón real, Cleodolinda perefirió esperar a que el caballero cumpliera su cometido. Ya podría examinarlo bien después." } else if context.princesa_rechazada { "Cleodolinda esperó fuera de la cueva a que Sant Jordi finalizara su deber, si es que era tan machote como decía ser..." } else { unreachable!("Some flag should've been set.") }),
                     state_change: arc!({}),

@@ -1,6 +1,6 @@
 #![allow(clippy::too_many_arguments)]
 
-use bevy::prelude::*;
+use bevy::{log, prelude::*};
 use bevy_kira_audio::prelude::*;
 
 use crate::{
@@ -23,8 +23,9 @@ impl Plugin for BookPlugin {
         app.add_event::<Transition>()
             .add_event::<AdvanceSimpleNode>()
             .add_event::<EraseEverything>()
-            .add_event::<PageFlipEnded>()
             .add_event::<OptionChosen>()
+            .add_event::<ShowArrow>()
+            .add_event::<GameEnded>()
             .add_systems(OnEnter(GameState::Playing), (setup_graph, setup_lifecycle))
             .add_systems(
                 Update,
@@ -34,14 +35,20 @@ impl Plugin for BookPlugin {
                     interact_with_options,
                     erase_everything_listener,
                     draw_chosen_option,
+                    show_arrow_system,
                     advance_simple_node_listener,
+                    end_game_listener,
                     flip_page,
                     flip_page_listener,
+                    interact_with_end_button,
                 )
                     .run_if(in_state(GameState::Playing)),
             );
     }
 }
+
+#[derive(Event, Default)]
+pub struct GameEnded;
 
 #[derive(Event)]
 pub struct OptionChosen {
@@ -57,10 +64,10 @@ pub struct EraseEverything;
 pub struct AdvanceSimpleNode;
 
 #[derive(Event, Default)]
-pub struct PageFlipEnded;
+pub struct Transition;
 
 #[derive(Event, Default)]
-pub struct Transition;
+pub struct ShowArrow;
 
 #[derive(Resource)]
 pub struct LifecycleManager(pub Lifecycle);
@@ -72,6 +79,7 @@ pub enum Lifecycle {
     Chosen,
     Transitioning,
     SimpleNode,
+    End,
 }
 
 impl Lifecycle {
@@ -83,6 +91,7 @@ impl Lifecycle {
             Chosen => Transitioning,
             Transitioning => ShowNode,
             SimpleNode => Transitioning,
+            End => ShowNode,
         }
     }
 }
@@ -154,6 +163,13 @@ fn erase_everything_listener(
     }
 }
 
+fn end_game_listener(mut events: EventReader<GameEnded>, mut lifecycle: ResMut<LifecycleManager>) {
+    for _ in events.read() {
+        log::info!("Received GameEnded event");
+        lifecycle.0 = Lifecycle::End;
+    }
+}
+
 fn flip_page(
     lifecycle: Res<LifecycleManager>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
@@ -189,11 +205,19 @@ fn flip_page_listener(
     lifecycle: Res<LifecycleManager>,
     players: Query<&AnimationPlayer>,
     mut event_writer: EventWriter<Transition>,
+    graph: Res<BookGraph>,
+    mut show_arrow: EventWriter<ShowArrow>,
 ) {
     if let Lifecycle::Transitioning = lifecycle.0 {
         for player in players.iter() {
             if player.is_finished() {
                 event_writer.send_default();
+                match graph.get_current_node() {
+                    Node::Simple { next, .. } if next.is_some() => {
+                        show_arrow.send_default();
+                    }
+                    _ => {}
+                };
             }
         }
     }
@@ -218,6 +242,7 @@ fn show_current_node_and_transition(
     mut commands: Commands,
     fonts: Res<FontAssets>,
     textures: Res<UiTextures>,
+    mut game_ended: EventWriter<GameEnded>,
 ) {
     if let Lifecycle::ShowNode = lifecycle.0 {
         let first_page = first_page.single();
@@ -229,6 +254,7 @@ fn show_current_node_and_transition(
             &mut commands,
             &fonts,
             &textures,
+            &mut game_ended,
         );
         if is_simple {
             lifecycle.0 = Lifecycle::SimpleNode;
@@ -248,6 +274,7 @@ fn interact_with_options(
     mut option_chosen: EventWriter<OptionChosen>,
     mut transition: EventWriter<Transition>,
     mut erase_everything: EventWriter<EraseEverything>,
+    mut show_arrow: EventWriter<ShowArrow>,
 ) {
     if let Lifecycle::Choosing = lifecycle.0 {
         for (interaction, choice, mut background_color) in interaction_query.iter_mut() {
@@ -267,9 +294,42 @@ fn interact_with_options(
                     });
                     erase_everything.send_default();
                     transition.send_default();
+                    show_arrow.send_default();
                 }
             }
         }
+    }
+}
+
+#[derive(Component)]
+pub struct Arrow;
+
+fn show_arrow_system(
+    mut commands: Commands,
+    textures: Res<UiTextures>,
+    mut events: EventReader<ShowArrow>,
+    second_page: Query<Entity, With<SecondPage>>,
+) {
+    for _ in events.read() {
+        commands
+            .entity(second_page.single())
+            .with_children(|parent| {
+                parent.spawn((
+                    ImageBundle {
+                        image: textures.arrow.clone().into(),
+                        style: Style {
+                            position_type: PositionType::Absolute,
+                            bottom: Val::Px(0.),
+                            right: Val::Px(0.),
+                            height: Val::Px(50.),
+                            ..default()
+                        },
+                        ..default()
+                    },
+                    Erasable,
+                    Arrow,
+                ));
+            });
     }
 }
 
@@ -286,6 +346,9 @@ pub struct MainText;
 #[derive(Component)]
 pub struct Erasable;
 
+#[derive(Component)]
+pub struct EndButton;
+
 /// Returns whether or not the node is simple.
 fn show_current_node(
     graph: &BookGraph,
@@ -294,6 +357,7 @@ fn show_current_node(
     commands: &mut Commands,
     fonts: &Res<FontAssets>,
     textures: &Res<UiTextures>,
+    game_ended: &mut EventWriter<GameEnded>,
 ) -> bool {
     let node = graph.get_current_node();
     match node {
@@ -375,7 +439,15 @@ fn show_current_node(
             });
             false
         }
-        Node::Simple { content, extra, .. } => {
+        Node::Simple {
+            content,
+            extra,
+            next,
+        } => {
+            if next.is_none() {
+                log::info!("Sending GameEnded event");
+                game_ended.send_default();
+            }
             commands.entity(first_page).with_children(|parent| {
                 parent.spawn((
                     get_formatted_text((content)(&graph.context), fonts),
@@ -444,30 +516,13 @@ fn show_current_node(
                             ),
                             Erasable,
                         ));
-                        // parent
-                        // .spawn(NodeBundle {
-                        //     style: Style {
-                        //         position_type: PositionType::Relative,
-                        //         top: Val::Px(0.),
-                        //         left: Val::Px(0.),
-                        //         margin: UiRect {
-                        //             left: Val::Percent(-50.),
-                        //             top: Val::Percent(-50.),
-                        //             ..default()
-                        //         },
-                        //         ..default()
-                        //     },
-                        //     ..default()
-                        // })
-                        // .with_children(|parent| {
-                        // });
                     });
                 if let Some(ref illustration) = extra.illustration {
                     parent.spawn((
                         ImageBundle {
                             image: illustration.clone().into(),
                             style: Style {
-                                width: Val::Percent(100.),
+                                width: Val::Percent(90.),
                                 ..default()
                             },
                             ..default()
@@ -475,16 +530,54 @@ fn show_current_node(
                         Erasable,
                     ));
                 }
+                if let None = next {
+                    parent
+                        .spawn((ButtonBundle::default(), EndButton, Erasable))
+                        .with_children(|parent| {
+                            parent.spawn(ImageBundle {
+                                image: textures.end_button.clone().into(),
+                                ..default()
+                            });
+                        });
+                }
             });
             true
         }
     }
 }
 
+fn interact_with_end_button(
+    mut interaction_query: Query<
+        (&Interaction, &mut UiImage),
+        (Changed<Interaction>, With<EndButton>),
+    >,
+    textures: Res<UiTextures>,
+    mut graph: ResMut<BookGraph>,
+    mut transition: EventWriter<Transition>,
+    mut erase_everything: EventWriter<EraseEverything>,
+) {
+    for (interaction, mut image) in interaction_query.iter_mut() {
+        match *interaction {
+            Interaction::Hovered => {
+                image.texture = textures.end_button_hover.clone();
+            }
+            Interaction::None => {
+                image.texture = textures.end_button.clone();
+            }
+            Interaction::Pressed => {
+                log::info!("Pressed end button");
+                graph.reset();
+                transition.send_default();
+                erase_everything.send_default();
+            }
+        }
+    }
+}
+
 fn setup_graph(mut commands: Commands, illustrations: Res<Illustrations>) {
-    let graph = book_content::get_book_content(&illustrations);
+    let mut graph = book_content::get_book_content(&illustrations);
     // TODO: For testing, remove.
-    // graph.set_current_node(1);
+    // graph.set_current_node(43);
     commands.insert_resource(graph);
 }
 
